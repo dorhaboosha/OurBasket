@@ -1,0 +1,9 @@
+# Normalize line endings (repo is developed on Windows, deployed on Linux/Render)
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
