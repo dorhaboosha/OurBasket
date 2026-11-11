@@ -646,9 +646,9 @@ OurBasket --- רשימת קניות
 -   **Validation:** zod, משותף לטפסים ולשרת.
 -   **Database:** PostgreSQL 16 על Neon Free (פרנקפורט, `aws-eu-central-1`).
     בפיתוח מקומי: PostgreSQL 16 ב-Docker.
--   **ORM:** Prisma 7 יציבה, עם driver adapter. בתחילת שלב 2 ייבדק מה מתאים
-    יותר לסביבת serverless של Vercel: `@prisma/adapter-pg` (כמו ב-Our
-    Calendar) או `@prisma/adapter-neon`.
+-   **ORM:** Prisma 7 יציבה, עם `@prisma/adapter-pg` בכל הסביבות (Docker
+    מקומי, Postgres ב-CI, ו-Neon דרך ה-connection string המאוגם ב-Vercel), כמו
+    ב-Our Calendar. ראו יומן ההחלטות.
 -   **Authentication:** Better Auth עם Google.
 -   **Real-time:** Pusher Channels.
 -   **Deployment:** Vercel Hobby (ראו 15.3).
@@ -691,8 +691,8 @@ OurBasket --- רשימת קניות
     -   התחברות עם Google לא תעבוד בהן, כי הכתובת שלהן משתנה. בדיקות
         התחברות נעשות מקומית וב-Production.
 -   **מיגרציות** (`prisma migrate deploy`) רצות רק ב-build של Production,
-    אחרי build מוצלח. build של גרסת תצוגה לא נוגע במסד הנתונים של
-    Production.
+    אחרי build מוצלח, ואחריהן ה-seed (`prisma db seed`), שבטוח להרצה חוזרת.
+    build של גרסת תצוגה לא נוגע במסד הנתונים של Production.
 -   **פריסה רק אחרי CI ירוק:** כמו `checksPass` ב-Our Calendar. ההגדרה
     המדויקת ב-Vercel תיבדק בשלב הפריסה.
 -   משתני הסביבה מוגדרים ב-Vercel, בנפרד ל-Production ול-Preview.
@@ -1098,11 +1098,16 @@ Vercel, Neon, Pusher ו-GitHub Actions כפוף למכסות ולתנאים של
 | 2026-11-11 | פלטת 12 הצבעים: blue, sky, teal, green, lime, amber, orange, red, pink, purple, indigo, slate (גווני 700). צבע ה-Theme: teal (`#0f766e`). בדיקת יחידה מוודאת ניגודיות 4.5:1 לפחות מול לבן לכל צבע. | כל צבע קריא עם טקסט לבן; הבדיקה מונעת הוספת צבע לא קריא. |
 | 2026-11-11 | אייקון זמני (`src/app/icon.svg`): סל קניות לבן על teal. הלוגו הסופי וכל הגדלים בשלב 10. | בלי אייקון הדפדפן מבקש `favicon.ico`, וה-404 מכשיל את בדיקות ה-E2E (שגיאה בקונסול). |
 | 2026-11-11 | בדיקות E2E על פורט 3200. | Our Calendar משתמש ב-3100, ושני הפרויקטים יכולים לרוץ יחד. |
+| 2026-11-11 | `main` מחייב שבדיקת ה-CI "Lint, types, tests and build" (מ-GitHub Actions) תעבור לפני מיזוג. | קוד שנכשל בבדיקות לא נכנס ל-`main`. |
+| 2026-11-11 | `@prisma/adapter-pg` ולא `@prisma/adapter-neon`. | ה-adapter של Neon מדבר עם ה-proxy של Neon (WebSocket/HTTP), ולא יכול להתחבר ל-Postgres המקומי ב-Docker או לשירות Postgres ב-CI. adapter אחד לכל הסביבות שומר על התנהגות זהה; ב-Vercel הוא עובד עם ה-connection string המאוגם של Neon. Prisma 7.10 (Prisma 8 עדיין RC). |
+| 2026-11-11 | שלב 2: טבלאות `category`, `product`, `list_state`, `purchase_record`, `purchase_record_item`. טבלאות Better Auth יתווספו בשלב 3, יחד עם ההתחברות. | כל טבלה נוצרת בשלב שמשתמש בה. |
+| 2026-11-11 | כל עמודות הזמן `timestamptz`. | זמן חד-משמעי ב-UTC (ראו 9.2). |
+| 2026-11-11 | כללים במסד הנתונים: CHECK על כמות (1–999), שם (לא ריק, עד 60 תווים) ושורה יחידה ב-`list_state`; Foreign Key עם `Restrict` ממוצר לקטגוריה; trigger שמונע מחיקה של "כללי", ביטול הסימון שלה כקטגוריית מערכת, ויותר מקטגוריית מערכת אחת. | השרת דוחה את אלה ממילא; מסד הנתונים שומר על הנתונים נכונים גם במקרה של באג או שאילתה ישירה (ראו 18). Prisma לא משווה CHECK ו-triggers, כך שמיגרציות עתידיות לא ימחקו אותם (נבדק). |
+| 2026-11-11 | ה-seed יוצר את `list_state` ואת הקטגוריות רק כשאין אף קטגוריה. | בטוח להרצה חוזרת, ולא מחזיר קטגוריה שנמחקה או מבטל שינוי שם. |
+| 2026-11-11 | נרמול שמות (`src/lib/names.ts`): Unicode NFC, הסרת רווחים בקצוות, איחוד כל רצף רווחים (כולל טאב ורווח קשיח), ואותיות קטנות באנגלית. | הגדרת הכפילות בסעיף 8.2, אחת לכל המערכת. |
 
 ### החלטות פתוחות
 
--   `@prisma/adapter-pg` או `@prisma/adapter-neon` ב-Vercel: ייבדק בתחילת
-    שלב 2.
 -   ESLint 9 מסומן ב-npm כ-deprecated. לעבור ל-ESLint 10 כש-`eslint-config-next`
     והתוספים שלו יתמכו בו.
 -   התראת אבטחה בינונית על `minimatch` (GHSA-g3hv-75wg-m249) בכלי הפיתוח בלבד

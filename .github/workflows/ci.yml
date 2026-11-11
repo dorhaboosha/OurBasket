@@ -24,6 +24,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    services:
+      postgres:
+        # Same major version as docker-compose.yml and the Neon project.
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ourbasket_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ourbasket_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    # Placeholder values only. CI never talks to Google, Pusher or a real database.
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ourbasket_test
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/ourbasket_test
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ourbasket_test
+
     steps:
       - uses: actions/checkout@v7
 
@@ -32,6 +54,7 @@ jobs:
           node-version: 24
           cache: npm
 
+      # Also generates the Prisma client (postinstall).
       - run: npm ci
 
       - name: Format
@@ -43,8 +66,13 @@ jobs:
       - name: Types
         run: npm run typecheck
 
-      - name: Unit tests
+      # Integration tests apply the migrations to the Postgres service first.
+      - name: Unit and integration tests
         run: npm test
+
+      # The seed must run cleanly on a migrated database, and twice in a row.
+      - name: Seed
+        run: npm run db:seed && npm run db:seed
 
       # Builds the app and runs the browser tests against it, in the preinstalled Chrome.
       - name: End-to-end tests

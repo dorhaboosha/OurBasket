@@ -1,0 +1,26 @@
+# Local development database. Production uses Neon (Postgres 16, to match).
+name: ourbasket
+
+services:
+  db:
+    image: postgres:16
+    container_name: ourbasket-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ourbasket
+    ports:
+      # Host port 5437: 5436 is Our Calendar's, so both projects can run at once.
+      - "5437:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ourbasket"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
