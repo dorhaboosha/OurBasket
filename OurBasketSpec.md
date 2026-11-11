@@ -708,7 +708,8 @@ Vercel, Neon, Pusher ו-GitHub Actions כפוף למכסות ולתנאים של
 
 -   **פיתוח מקומי:** PostgreSQL 16 ב-Docker Compose, על פורט 5437 (5436
     תפוס על ידי Our Calendar, כך ששני הפרויקטים יכולים לרוץ יחד). מסד
-    נתונים נפרד לבדיקות האינטגרציה (`ourbasket_test`).
+    נתונים נפרד לבדיקות האינטגרציה (`ourbasket_test`). בדיקות ה-E2E רצות על
+    פורט 3200 (3100 של Our Calendar), מאותה סיבה.
 -   **כלים:** Prettier (רוחב שורה 100), ESLint, TypeScript strict, ו-`AGENTS.md`
     שנוצר על ידי Next.js 16.
 -   **בדיקות, כמו ב-Our Calendar:**
@@ -1093,10 +1094,20 @@ Vercel, Neon, Pusher ו-GitHub Actions כפוף למכסות ולתנאים של
 | 2026-11-11 | התחברות מחייבת `email_verified = true` מ-Google, בנוסף לכתובת מורשית. | לא סומכים על כתובת שלא אומתה. (הערת CodeRabbit) |
 | 2026-11-11 | `PurchaseRecordItem` שומר `categoryId` (בלי Foreign Key); הוספה מהיסטוריה מזהה את הקטגוריה לפי המזהה, לא לפי השם. | שינוי שם לא שובר את השיוך, וקטגוריה אחרת עם השם הישן לא נבחרת. (הערת CodeRabbit) |
 
+| 2026-11-11 | שלב 1: Next.js 16.4.6, React 19.3.1, Chakra UI 3.38, next-intl 4.15, Vitest 5.1, Playwright 1.65. TypeScript 5.9 ו-ESLint 9, כמו ב-Our Calendar, ולא TypeScript 7 / ESLint 10 שכבר יצאו. | ESLint 10 לא נתמך עדיין בתוספים של `eslint-config-next` (react, import, jsx-a11y); TypeScript 7 לא נבדק מול Next.js 16. הצירוף של Our Calendar מוכח. |
+| 2026-11-11 | פלטת 12 הצבעים: blue, sky, teal, green, lime, amber, orange, red, pink, purple, indigo, slate (גווני 700). צבע ה-Theme: teal (`#0f766e`). בדיקת יחידה מוודאת ניגודיות 4.5:1 לפחות מול לבן לכל צבע. | כל צבע קריא עם טקסט לבן; הבדיקה מונעת הוספת צבע לא קריא. |
+| 2026-11-11 | אייקון זמני (`src/app/icon.svg`): סל קניות לבן על teal. הלוגו הסופי וכל הגדלים בשלב 10. | בלי אייקון הדפדפן מבקש `favicon.ico`, וה-404 מכשיל את בדיקות ה-E2E (שגיאה בקונסול). |
+| 2026-11-11 | בדיקות E2E על פורט 3200. | Our Calendar משתמש ב-3100, ושני הפרויקטים יכולים לרוץ יחד. |
+
 ### החלטות פתוחות
 
 -   `@prisma/adapter-pg` או `@prisma/adapter-neon` ב-Vercel: ייבדק בתחילת
     שלב 2.
+-   ESLint 9 מסומן ב-npm כ-deprecated. לעבור ל-ESLint 10 כש-`eslint-config-next`
+    והתוספים שלו יתמכו בו.
+-   התראת אבטחה בינונית על `minimatch` (GHSA-g3hv-75wg-m249) בכלי הפיתוח בלבד
+    (ESLint), כמו ב-Our Calendar. לאפליקציה עצמה אין חולשות
+    (`npm audit --omit=dev`). לבדוק שוב כשיעברו ל-ESLint 10.
 -   ההגדרה המדויקת ב-Vercel להמתנה ל-CI לפני פריסה ל-Production: תיבדק
     בשלב 11.
 
