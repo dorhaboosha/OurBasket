@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Temporary icon: a shopping basket on the brand color. The final logo comes in step 10. -->
+  <rect width="64" height="64" rx="14" fill="#0f766e"/>
+  <path d="M22 27 30 15M42 27 34 15" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+  <path d="M12 27h40l-4.5 21a4 4 0 0 1-3.9 3H20.4a4 4 0 0 1-3.9-3z" fill="#fff"/>
+  <path d="M25 33v12M32 33v12M39 33v12" stroke="#0f766e" stroke-width="3" stroke-linecap="round"/>
+</svg>
