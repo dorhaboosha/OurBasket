@@ -4,9 +4,10 @@ A shared shopping list for two people (Dor and Maayan), in Hebrew and right-to-l
 One list, edited from any device, synced in real time, with categories, checked items,
 purchase history and export to WhatsApp text or a printable page.
 
-> **Status:** Step 1 (project setup) is done: Next.js, Chakra UI in RTL, Hebrew text,
-> tests and CI. Next: the database (step 2). See [`OurBasketSpec.md`](OurBasketSpec.md)
-> for the full spec and the decision log (Hebrew).
+> **Status:** Steps 1–2 are done: the project setup (Next.js, Chakra UI in RTL, Hebrew
+> text, tests, CI) and the database (Prisma, tables, rules, seed). Next: sign-in with
+> Google (step 3). See [`OurBasketSpec.md`](OurBasketSpec.md) for the full spec and the
+> decision log (Hebrew).
 
 ## Tech stack
 
@@ -14,22 +15,49 @@ purchase history and export to WhatsApp text or a printable page.
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | App      | [Next.js 16](https://nextjs.org) (App Router, Cache Components), React 19, TypeScript (strict)                                     |
 | UI       | [Chakra UI 3](https://chakra-ui.com), Hebrew text via [next-intl](https://next-intl.dev)                                           |
+| Database | PostgreSQL 16 with [Prisma 7](https://www.prisma.io) (`@prisma/adapter-pg`)                                                       |
 | Tests    | [Vitest](https://vitest.dev), [Playwright](https://playwright.dev), [axe-core](https://github.com/dequelabs/axe-core)              |
-| Planned  | PostgreSQL 16 + [Prisma 7](https://www.prisma.io), [Better Auth](https://www.better-auth.com), [Pusher Channels](https://pusher.com) |
+| Planned  | [Better Auth](https://www.better-auth.com) (step 3), [Pusher Channels](https://pusher.com) (step 8)                               |
 | Hosting  | [Vercel](https://vercel.com) (Frankfurt) + [Neon](https://neon.tech) (Frankfurt) — from step 11                                    |
 
 ## Running locally
 
-**Requirements:** Node.js 24, npm, and Google Chrome (for the end-to-end tests).
-Docker Desktop is needed from step 2 (local database).
+**Requirements:** Node.js 24, npm, Docker Desktop, and Google Chrome (for the
+end-to-end tests).
 
 ```bash
-npm install
+npm install                # also generates the Prisma client
+cp .env.example .env       # the database URLs already match the Docker database
+npm run db:up              # Postgres 16 in Docker, on host port 5437
+npm run db:migrate         # apply migrations, and regenerate the Prisma client
+npm run db:seed            # the 12 default categories (safe to run again)
 npm run dev                # http://localhost:3000
 ```
 
-`.env.example` lists the environment variables the later steps need. Copy it to `.env`
-when they are in use; step 1 needs none.
+`npm run db:studio` opens Prisma Studio, to look at or clean up local data.
+`npm run db:down` stops the database (the data stays in a Docker volume).
+
+## Database
+
+The schema is in [`prisma/schema.prisma`](prisma/schema.prisma): categories, products,
+the list revision (`list_state`, one row), and the purchase history (records and their
+items, stored as snapshots). There is no household table: there is one shared list.
+
+Rules Prisma can't express live in the migration SQL, so they hold even if a bug or a
+direct query tries otherwise:
+
+- Quantities are whole numbers from 1 to 999; names are not blank and at most 60
+  characters; `list_state` has a single row.
+- A product's name is unique across the whole list, by its normalized form (trimmed,
+  spaces collapsed, English lower-cased: [`src/lib/names.ts`](src/lib/names.ts)).
+- A category with products can't be deleted (delete its products first, in the same
+  transaction).
+- The system category "General" can't be deleted, can't stop being the system
+  category, and there is only one.
+- History items keep the category's id, name, color and emoji as they were, even after
+  the category is deleted.
+
+All times are `timestamptz` (UTC), shown in `Asia/Jerusalem`.
 
 ## Configuration
 
@@ -44,9 +72,15 @@ Secrets and emails are environment variables only: see [`.env.example`](.env.exa
 ## Tests
 
 ```bash
-npm test                   # unit tests (Vitest)
+npm run test:unit          # fast, no database
+npm run test:integration   # against the ourbasket_test database (npm run db:up first)
+npm test                   # both
 npm run test:e2e           # production build + Playwright in Chrome, on port 3200
 ```
+
+Integration tests use a separate `ourbasket_test` database (created by
+[`docker/init-test-db.sql`](docker/init-test-db.sql)), so they never touch development
+data. They apply the migrations first and empty the tables before each test.
 
 - End-to-end tests run on a desktop browser and on a phone-sized one (Pixel 7); tests
   for both are tagged `@mobile`.
@@ -59,13 +93,15 @@ Other checks: `npm run lint`, `npm run typecheck`, `npm run format:check`
 
 ## CI
 
-[GitHub Actions](.github/workflows/ci.yml) runs formatting, lint, types, the unit tests,
-the build and the end-to-end tests on every push and on every Pull Request into `main`.
+[GitHub Actions](.github/workflows/ci.yml) runs formatting, lint, types, the unit and
+integration tests (against a Postgres 16 service), the seed (twice), the build and the
+end-to-end tests on every push and on every Pull Request into `main`.
 
 ## Workflow
 
 `main` is protected: every step goes through its own branch (for example
-`step-1-project-setup`) and a Pull Request.
+`step-1-project-setup`) and a Pull Request, and the CI check
+"Lint, types, tests and build" must pass before merging.
 
 ## Project structure
 
@@ -75,6 +111,12 @@ src/
   components/          providers (Chakra, Emotion)
   config/              app.config.ts and the contrast helper
   i18n/                next-intl setup (one fixed locale)
+  lib/                 Prisma client, name normalization
+  modules/             domain logic: categories/ (seed)
+  generated/           Prisma client (generated, not in git)
 messages/he.json       all UI text
+prisma/                schema, migrations, seed script
+docker/                local database setup
+tests/integration/     tests against the test database
 tests/e2e/             Playwright tests and helpers (accessibility, touch targets)
 ```

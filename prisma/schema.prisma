@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// One shared list: no Household (spec 1.1, 16). Better Auth's tables come in step 3.
+// Rules Prisma can't express (CHECK constraints, the system-category trigger) are in
+// the migration SQL; see the comments there.
+
+/// A product category. Exactly one is the system category "General" (isSystem): it
+/// can't be deleted or lose that flag (database trigger), and catches products with
+/// no category.
+model Category {
+  id             String    @id @default(uuid())
+  name           String
+  /// The name trimmed, with runs of spaces collapsed and lower-cased (src/lib/names.ts).
+  normalizedName String    @unique
+  /// A color key from appConfig.colorPalette.
+  color          String
+  /// An emoji.
+  icon           String
+  sortOrder      Int
+  isSystem       Boolean   @default(false)
+  /// Raised on every change; edits must send the version they loaded (optimistic locking).
+  version        Int       @default(1)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
+  products       Product[]
+
+  @@index([sortOrder])
+  @@map("category")
+}
+
+/// A product on the active list. Deleting is a hard delete (spec 8.5).
+model Product {
+  id             String   @id @default(uuid())
+  /// A category with products can't be deleted: delete its products first, in the
+  /// same transaction (spec 7.3).
+  categoryId     String
+  category       Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  name           String
+  /// Unique across the whole list, so the same product is never listed twice (spec 8.2).
+  normalizedName String   @unique
+  /// 1 to 999.
+  quantity       Int      @default(1)
+  isChecked      Boolean  @default(false)
+  sortOrder      Int
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([categoryId, sortOrder])
+  @@map("product")
+}
+
+/// A single row (id 1, enforced by a CHECK constraint) with the list's revision. Every
+/// saved change raises it, and real-time events carry it (spec 12.2).
+model ListState {
+  id       Int @id @default(1)
+  revision Int @default(0)
+
+  @@map("list_state")
+}
+
+/// One "update list" action: the checked products that were bought.
+model PurchaseRecord {
+  id          String               @id @default(uuid())
+  purchasedAt DateTime             @default(now()) @db.Timestamptz(3)
+  createdAt   DateTime             @default(now()) @db.Timestamptz(3)
+  items       PurchaseRecordItem[]
+
+  @@index([purchasedAt(sort: Desc)])
+  @@map("purchase_record")
+}
+
+/// A product as it was when bought: a snapshot, not a link, so later changes to the
+/// product or its category don't rewrite history (spec 9.2).
+model PurchaseRecordItem {
+  id               String         @id @default(uuid())
+  purchaseRecordId String
+  purchaseRecord   PurchaseRecord @relation(fields: [purchaseRecordId], references: [id], onDelete: Cascade)
+  productName      String
+  normalizedName   String
+  quantity         Int
+  /// The category's id at the time. Deliberately not a foreign key: it must survive the
+  /// category being deleted, and "add to list" finds the category by it (spec 10.4).
+  categoryId       String
+  categoryName     String
+  categoryColor    String
+  categoryIcon     String
+
+  @@index([purchaseRecordId])
+  @@map("purchase_record_item")
+}
