@@ -4,10 +4,10 @@ A shared shopping list for two people (Dor and Maayan), in Hebrew and right-to-l
 One list, edited from any device, synced in real time, with categories, checked items,
 purchase history and export to WhatsApp text or a printable page.
 
-> **Status:** Steps 1–2 are done: the project setup (Next.js, Chakra UI in RTL, Hebrew
-> text, tests, CI) and the database (Prisma, tables, rules, seed). Next: sign-in with
-> Google (step 3). See [`OurBasketSpec.md`](OurBasketSpec.md) for the full spec and the
-> decision log (Hebrew).
+> **Status:** Steps 1–3 are done: the project setup (Next.js, Chakra UI in RTL, Hebrew
+> text, tests, CI), the database (Prisma, tables, rules, seed) and sign-in with Google
+> for the two allowed accounts. Next: managing categories (step 4). See
+> [`OurBasketSpec.md`](OurBasketSpec.md) for the full spec and the decision log (Hebrew).
 
 ## Tech stack
 
@@ -16,8 +16,9 @@ purchase history and export to WhatsApp text or a printable page.
 | App      | [Next.js 16](https://nextjs.org) (App Router, Cache Components), React 19, TypeScript (strict)                                     |
 | UI       | [Chakra UI 3](https://chakra-ui.com), Hebrew text via [next-intl](https://next-intl.dev)                                           |
 | Database | PostgreSQL 16 with [Prisma 7](https://www.prisma.io) (`@prisma/adapter-pg`)                                                       |
+| Auth     | [Better Auth](https://www.better-auth.com) with Google                                                                             |
 | Tests    | [Vitest](https://vitest.dev), [Playwright](https://playwright.dev), [axe-core](https://github.com/dequelabs/axe-core)              |
-| Planned  | [Better Auth](https://www.better-auth.com) (step 3), [Pusher Channels](https://pusher.com) (step 8)                               |
+| Planned  | [Pusher Channels](https://pusher.com) (step 8)                                                                                     |
 | Hosting  | [Vercel](https://vercel.com) (Frankfurt) + [Neon](https://neon.tech) (Frankfurt) — from step 11                                    |
 
 ## Running locally
@@ -36,6 +37,33 @@ npm run dev                # http://localhost:3000
 
 `npm run db:studio` opens Prisma Studio, to look at or clean up local data.
 `npm run db:down` stops the database (the data stays in a Docker volume).
+
+In `.env`, fill in:
+
+- `BETTER_AUTH_SECRET`: any random string of 32+ characters:
+  `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`
+- `USER_EMAIL_DOR`, `USER_EMAIL_MAAYAN`: the two Google accounts allowed to sign in.
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`: an OAuth client of type "Web application"
+  in the Google Cloud project "OurBasket", with the JavaScript origin
+  `http://localhost:3000` and the redirect URI
+  `http://localhost:3000/api/auth/callback/google`. While the consent screen is in
+  "Testing", both emails must be listed as test users.
+
+## Sign-in
+
+Only two people can use the app, with their Google accounts. There is no sign-up and no
+password.
+
+- Sign-in asks Google for name and email only (`openid email profile`).
+- A Google sign-in is accepted only if the email is one of the two in the environment
+  (`USER_EMAIL_*`) **and** Google says it is verified; otherwise no user or session is
+  created and the login page explains why.
+- Every page, action and route checks the session on the server, and checks again that
+  the email is still allowed: removing an email from the environment signs that user out
+  on their next request.
+- [`src/proxy.ts`](src/proxy.ts) only redirects requests without a session cookie to
+  `/login`; it is not the security check.
+- `/login` and `/privacy` are public.
 
 ## Database
 
@@ -84,6 +112,9 @@ data. They apply the migrations first and empty the tables before each test.
 
 - End-to-end tests run on a desktop browser and on a phone-sized one (Pixel 7); tests
   for both are tagged `@mobile`.
+- End-to-end tests sign in without Google: they create the user and a session directly
+  in the test database and set the session cookie. They use test emails, never the real
+  ones.
 - Every test fails on any browser console error.
 - Each screen is scanned with axe-core (WCAG 2.1 A and AA), and on the phone every
   tappable element must be at least 44×44 pixels.
@@ -107,12 +138,15 @@ end-to-end tests on every push and on every Pull Request into `main`.
 
 ```
 src/
-  app/                 routes (layout, pages), icon.svg
+  app/                 routes: (app)/ = signed-in pages, login/, privacy/,
+                       api/auth (Better Auth), icon.svg
   components/          providers (Chakra, Emotion)
   config/              app.config.ts and the contrast helper
   i18n/                next-intl setup (one fixed locale)
-  lib/                 Prisma client, name normalization
-  modules/             domain logic: categories/ (seed)
+  lib/                 Prisma client, Better Auth server and client, name normalization
+  modules/             domain logic: auth/ (allowlist, hooks, current user),
+                       categories/ (seed)
+  proxy.ts             redirects to /login when there is no session cookie
   generated/           Prisma client (generated, not in git)
 messages/he.json       all UI text
 prisma/                schema, migrations, seed script

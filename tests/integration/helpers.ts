@@ -6,8 +6,16 @@ import { prisma } from "@/lib/prisma";
  */
 export async function resetDatabase() {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "purchase_record_item", "purchase_record", "product", "category", "list_state" CASCADE',
+    `TRUNCATE "purchase_record_item", "purchase_record", "product", "category", "list_state",
+      "verification", "account", "session", "user" CASCADE`,
   );
+}
+
+/** Creates a user row as Better Auth would after a sign-in. */
+export function createUser(configKey: string, email = `${configKey}@example.com`) {
+  return prisma.user.create({
+    data: { id: crypto.randomUUID(), name: "Google name", email, emailVerified: true, configKey },
+  });
 }
 
 /** Creates a category with sensible defaults. */

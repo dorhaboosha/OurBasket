@@ -7,9 +7,82 @@ datasource db {
   provider = "postgresql"
 }
 
-// One shared list: no Household (spec 1.1, 16). Better Auth's tables come in step 3.
+// One shared list: no Household (spec 1.1, 16).
 // Rules Prisma can't express (CHECK constraints, the system-category trigger) are in
 // the migration SQL; see the comments there.
+
+// ---- Users & authentication ----
+// User, Session, Account and Verification are the core tables Better Auth expects.
+// Only the two people in app.config.ts can have a user row (src/modules/auth/hooks.ts).
+
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(3)
+  /// Which user from app.config.ts this is ("dor" / "maayan"). Set by the server only.
+  configKey     String    @unique
+  sessions      Session[]
+  accounts      Account[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime @db.Timestamptz(3)
+  token     String   @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Google's tokens, encrypted by Better Auth (account.encryptOAuthTokens).
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime? @db.Timestamptz(3)
+  refreshTokenExpiresAt DateTime? @db.Timestamptz(3)
+  scope                 String?
+  /// Unused: there is no email/password sign-in. Part of Better Auth's table.
+  password              String?
+  createdAt             DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("account")
+}
+
+/// Short-lived values for the OAuth flow (state, PKCE verifier).
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ---- The shopping list ----
 
 /// A product category. Exactly one is the system category "General" (isSystem): it
 /// can't be deleted or lose that flag (database trigger), and catches products with
