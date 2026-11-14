@@ -22,6 +22,8 @@ const system = createSystem(
         },
         colors: {
           brand: { value: appConfig.themeColor },
+          // Hovered brand buttons: darker, so white text stays readable (not more transparent).
+          brandHover: { value: appConfig.themeHoverColor },
         },
       },
       semanticTokens: {
