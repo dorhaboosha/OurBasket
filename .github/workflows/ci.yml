@@ -45,6 +45,12 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ourbasket_test
       DIRECT_URL: postgresql://postgres:postgres@localhost:5432/ourbasket_test
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ourbasket_test
+      BETTER_AUTH_URL: http://localhost:3000
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
+      USER_EMAIL_DOR: dor@ci.test
+      USER_EMAIL_MAAYAN: maayan@ci.test
+      GOOGLE_CLIENT_ID: ci-client-id
+      GOOGLE_CLIENT_SECRET: ci-client-secret
 
     steps:
       - uses: actions/checkout@v7
