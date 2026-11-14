@@ -20,6 +20,10 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
       // Always show the account chooser, so signing in with the wrong account is easy to fix.
       prompt: "select_account",
+      // Copy Google's current name and email to the user on every sign-in, after
+      // validateUserInfo has checked them and before the session is created. Otherwise
+      // a changed Google email would stay stale here and fail the per-request check.
+      overrideUserInfoOnSignIn: true,
     },
   },
   user: {

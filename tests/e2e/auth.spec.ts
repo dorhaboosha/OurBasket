@@ -89,6 +89,31 @@ test.describe("signed out", () => {
       "profile",
     ]);
   });
+
+  test("when sign-in can't start, the button works again and says so", async ({
+    page,
+    pageErrors,
+  }) => {
+    await page.route("**/api/auth/sign-in/social", (route) => route.fulfill({ status: 500 }));
+    await page.goto("/login");
+    const button = page.getByRole("button", { name: "התחברות עם Google" });
+    // Retried: a click before React has hydrated the button does nothing.
+    await expect(async () => {
+      const request = page.waitForRequest("**/api/auth/sign-in/social", { timeout: 1000 });
+      await button.click({ timeout: 1000 });
+      await request;
+    }).toPass();
+
+    await expect(page.getByRole("main").getByRole("alert")).toHaveText("ההתחברות נכשלה. נסו שוב.");
+    await expect(button).toBeEnabled();
+    await expect(page).toHaveURL(/\/login$/);
+    // The browser logs the simulated 500; that error is the point of this test.
+    pageErrors.splice(
+      0,
+      pageErrors.length,
+      ...pageErrors.filter((error) => !error.includes("500")),
+    );
+  });
 });
 
 test.describe("signed in", () => {
@@ -113,9 +138,10 @@ test.describe("signed in", () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  test("sign out ends the session", async ({ page, signInAs }) => {
+  test("sign out ends the session", async ({ page, browser, signInAs }) => {
     await signInAs("dor");
     await page.goto("/");
+    const cookiesBefore = await page.context().cookies();
     // Retried: a click before React has hydrated the button does nothing.
     await expect(async () => {
       await page.getByRole("button", { name: "התנתקות" }).click({ timeout: 1000 });
@@ -124,6 +150,17 @@ test.describe("signed in", () => {
 
     await page.goto("/");
     await expect(page).toHaveURL(/\/login$/);
+
+    // The server revoked the session too: the old cookie, replayed, no longer gets in.
+    const replay = await browser.newContext({ baseURL: E2E_BASE_URL });
+    try {
+      await replay.addCookies(cookiesBefore);
+      const replayPage = await replay.newPage();
+      await replayPage.goto("/");
+      await expect(replayPage).toHaveURL(/\/login$/);
+    } finally {
+      await replay.close();
+    }
   });
 
   test("a failed sign out stays signed in, and can be tried again", async ({
@@ -149,6 +186,14 @@ test.describe("signed in", () => {
     await expect(signOut).toBeEnabled();
     expect(leftForLogin).toBe(false);
     await expect(page.getByRole("banner")).toContainText("שלום, דור");
+
+    // Once the server answers again, trying again signs out.
+    await page.unroute("**/api/auth/sign-out");
+    await signOut.click();
+    await expect(page).toHaveURL(/\/login$/);
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/login$/);
+
     // The browser logs the simulated 500; that error is the point of this test.
     pageErrors.splice(
       0,

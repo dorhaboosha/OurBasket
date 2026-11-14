@@ -24,10 +24,19 @@ export function rejectUnlistedOrUnverified({
   if (user.emailVerified !== true) return { error: EMAIL_NOT_VERIFIED };
 }
 
-/** databaseHooks.user.create.before: link the new user to their entry in app.config.ts. */
+/**
+ * databaseHooks.user.create.before: link the new user to their entry in app.config.ts.
+ * If that entry's email was changed to another Google account, the old user row still
+ * holds the key; it can never sign in again (its email is no longer allowed), so it is
+ * removed, with its sessions and accounts, and the key passes to the new account. The
+ * list itself isn't tied to users, so nothing else is lost.
+ */
 export async function assignConfigKey<T extends { email: string }>(user: T) {
   const configKey = findAllowedUserKey(user.email);
   if (!configKey) return false;
+  await prisma.user.deleteMany({
+    where: { configKey, email: { not: user.email.toLowerCase() } },
+  });
   return { data: { ...user, configKey } };
 }
 

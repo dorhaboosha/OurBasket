@@ -46,7 +46,7 @@ async function LoginContent({ searchParams }: Pick<PageProps<"/login">, "searchP
           {t(`errors.${errorKey}`)}
         </Text>
       )}
-      <GoogleSignInButton label={t("google")} />
+      <GoogleSignInButton label={t("google")} errorMessage={t("errors.generic")} />
       <Text color="fg.muted" fontSize="sm">
         {t("googleNote")}
       </Text>

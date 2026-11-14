@@ -60,6 +60,35 @@ describe("assignConfigKey", () => {
   it("blocks creating a user that is not on the allowlist", async () => {
     expect(await assignConfigKey({ email: "stranger@example.com" })).toBe(false);
   });
+
+  it("frees the key from the old account after the env email changed, and only that", async () => {
+    // USER_EMAIL_MAAYAN used to be another Google account, which still holds the key.
+    const old = await createUser("maayan", "maayan-old@example.com");
+    await prisma.session.create({
+      data: {
+        id: randomUUID(),
+        token: randomUUID(),
+        userId: old.id,
+        expiresAt: new Date(Date.now() + 60_000),
+      },
+    });
+    const dor = await createUser("dor", "dor@example.com");
+
+    const result = await assignConfigKey({ email: "Maayan@Example.com" });
+    expect(result).toMatchObject({ data: { configKey: "maayan" } });
+    expect(await prisma.user.findUnique({ where: { id: old.id } })).toBeNull();
+    expect(await prisma.session.count()).toBe(0);
+    expect(await prisma.user.findUnique({ where: { id: dor.id } })).not.toBeNull();
+
+    // The new account can now take the key.
+    await expect(createUser("maayan", "maayan@example.com")).resolves.toBeTruthy();
+  });
+
+  it("keeps the user that already has the allowed email", async () => {
+    const maayan = await createUser("maayan", "maayan@example.com");
+    await assignConfigKey({ email: "maayan@example.com" });
+    expect(await prisma.user.findUnique({ where: { id: maayan.id } })).not.toBeNull();
+  });
 });
 
 describe("rejectSessionForUnlistedUser", () => {
@@ -122,6 +151,11 @@ describe("Better Auth configuration", () => {
     ]);
     expect(authorize.searchParams.get("prompt")).toBe("select_account");
     expect(authorize.searchParams.get("state")).toBeTruthy();
+  });
+
+  it("refreshes the stored email from Google on every sign-in", () => {
+    // Otherwise a changed Google email stays stale and getCurrentUser signs the user out.
+    expect(auth.options.socialProviders?.google?.overrideUserInfoOnSignIn).toBe(true);
   });
 
   it("does not offer email/password sign-up", async () => {

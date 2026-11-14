@@ -61,6 +61,10 @@ password.
 - Every page, action and route checks the session on the server, and checks again that
   the email is still allowed: removing an email from the environment signs that user out
   on their next request.
+- Each sign-in copies the current name and email from Google to the user, so a Google
+  email change doesn't leave a stale one behind.
+- Changing `USER_EMAIL_DOR` or `USER_EMAIL_MAAYAN` to another Google account works: on
+  that account's first sign-in, the old account's user row (and its sessions) is removed.
 - [`src/proxy.ts`](src/proxy.ts) only redirects requests without a session cookie to
   `/login`; it is not the security check.
 - `/login` and `/privacy` are public.
