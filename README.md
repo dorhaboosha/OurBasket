@@ -4,9 +4,10 @@ A shared shopping list for two people (Dor and Maayan), in Hebrew and right-to-l
 One list, edited from any device, synced in real time, with categories, checked items,
 purchase history and export to WhatsApp text or a printable page.
 
-> **Status:** Steps 1–3 are done: the project setup (Next.js, Chakra UI in RTL, Hebrew
-> text, tests, CI), the database (Prisma, tables, rules, seed) and sign-in with Google
-> for the two allowed accounts. Next: managing categories (step 4). See
+> **Status:** Steps 1–4 are done: the project setup (Next.js, Chakra UI in RTL, Hebrew
+> text, tests, CI), the database (Prisma, tables, rules, seed), sign-in with Google for
+> the two allowed accounts, and the navigation with category management in the
+> settings. Next: products on the list (step 5). See
 > [`OurBasketSpec.md`](OurBasketSpec.md) for the full spec and the decision log (Hebrew).
 
 ## Tech stack
@@ -14,7 +15,7 @@ purchase history and export to WhatsApp text or a printable page.
 | Area     | Choice                                                                                                                             |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | App      | [Next.js 16](https://nextjs.org) (App Router, Cache Components), React 19, TypeScript (strict)                                     |
-| UI       | [Chakra UI 3](https://chakra-ui.com), Hebrew text via [next-intl](https://next-intl.dev)                                           |
+| UI       | [Chakra UI 3](https://chakra-ui.com), Hebrew text via [next-intl](https://next-intl.dev), [dnd-kit](https://dndkit.com) (drag and drop), [Lucide](https://lucide.dev) icons                                           |
 | Database | PostgreSQL 16 with [Prisma 7](https://www.prisma.io) (`@prisma/adapter-pg`)                                                       |
 | Auth     | [Better Auth](https://www.better-auth.com) with Google                                                                             |
 | Tests    | [Vitest](https://vitest.dev), [Playwright](https://playwright.dev), [axe-core](https://github.com/dequelabs/axe-core)              |
@@ -68,6 +69,23 @@ password.
 - [`src/proxy.ts`](src/proxy.ts) only redirects requests without a session cookie to
   `/login`; it is not the security check.
 - `/login` and `/privacy` are public.
+
+## Screens
+
+- **Navigation:** a sidebar on computers and a bar at the bottom of the screen on
+  phones, with the list, the history and the settings. The top bar shows the app's
+  name and who is signed in.
+- **Settings:** the categories (add, edit, delete, reorder), the account (sign out) and
+  about the app.
+  - A category has a name (up to 60 characters, unique after normalizing), one of the 12
+    palette colors and one emoji (40 suggestions, or any other typed in).
+  - Drag a category by its handle to reorder it, with a mouse or a finger; with the
+    keyboard, Space picks it up, the arrows move it and Space puts it down.
+  - Deleting a category asks first, and says how many products on the list go with it.
+    If that number changed meanwhile, nothing is deleted and the question updates.
+  - "General" is the system category: it can be renamed and recolored, never deleted.
+  - Edits are checked against the version they started from: if the other person saved
+    first, the save is refused and the latest data is shown.
 
 ## Database
 
@@ -142,14 +160,16 @@ end-to-end tests on every push and on every Pull Request into `main`.
 
 ```
 src/
-  app/                 routes: (app)/ = signed-in pages, login/, privacy/,
-                       api/auth (Better Auth), icon.svg
-  components/          providers (Chakra, Emotion)
+  app/                 routes: (app)/ = signed-in pages (list, history, settings,
+                       with the navigation), login/, privacy/, api/auth (Better
+                       Auth), icon.svg
+  components/          providers (Chakra, Emotion), shared dialog styles
   config/              app.config.ts and the contrast helper
   i18n/                next-intl setup (one fixed locale)
   lib/                 Prisma client, Better Auth server and client, name normalization
   modules/             domain logic: auth/ (allowlist, hooks, current user),
-                       categories/ (seed)
+                       categories/ (validation, database actions, seed),
+                       list/ (the list revision)
   proxy.ts             redirects to /login when there is no session cookie
   generated/           Prisma client (generated, not in git)
 messages/he.json       all UI text

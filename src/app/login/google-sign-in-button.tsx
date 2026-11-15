@@ -49,7 +49,7 @@ export function GoogleSignInButton({
         w="full"
         bg="brand"
         color="white"
-        _hover={{ bg: "brand", opacity: 0.9 }}
+        _hover={{ bg: "brandHover" }}
       >
         {label}
       </Button>

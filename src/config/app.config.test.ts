@@ -37,8 +37,9 @@ describe("color palette", () => {
 });
 
 describe("theme color", () => {
-  it("is readable with white text (4.5:1)", () => {
+  it("is readable with white text (4.5:1), also when hovered", () => {
     expect(contrastRatio(appConfig.themeColor, WHITE)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(appConfig.themeHoverColor, WHITE)).toBeGreaterThanOrEqual(4.5);
   });
 });
 

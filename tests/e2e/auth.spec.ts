@@ -138,9 +138,9 @@ test.describe("signed in", () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  test("sign out ends the session", async ({ page, browser, signInAs }) => {
+  test("sign out, in the settings, ends the session", async ({ page, browser, signInAs }) => {
     await signInAs("dor");
-    await page.goto("/");
+    await page.goto("/settings");
     const cookiesBefore = await page.context().cookies();
     // Retried: a click before React has hydrated the button does nothing.
     await expect(async () => {
@@ -170,7 +170,7 @@ test.describe("signed in", () => {
   }) => {
     await signInAs("dor");
     await page.route("**/api/auth/sign-out", (route) => route.fulfill({ status: 500 }));
-    await page.goto("/");
+    await page.goto("/settings");
     let leftForLogin = false;
     page.on("request", (request) => {
       if (request.isNavigationRequest() && request.url().includes("/login")) leftForLogin = true;

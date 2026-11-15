@@ -32,11 +32,17 @@ export type AppConfig = {
   timeZone: string;
   /** Main brand color: theme, browser toolbar and installed-app color. */
   themeColor: string;
+  /** themeColor, darker: hovered buttons. Also 4.5:1 with white text. */
+  themeHoverColor: string;
   users: readonly UserConfig[];
   /** The colors a category can have. */
   colorPalette: readonly PaletteColor[];
   /** Created by the database seed, in this order. */
   defaultCategories: readonly DefaultCategory[];
+  /** What the "new category" form starts with. */
+  newCategory: { color: string; emoji: string };
+  /** Emoji offered in the category form. Any other single emoji can be typed in too. */
+  emojiSuggestions: readonly string[];
   limits: {
     /** Product and category names, after trimming. */
     nameMaxLength: number;
@@ -51,6 +57,7 @@ export const appConfig = {
   direction: "rtl",
   timeZone: "Asia/Jerusalem",
   themeColor: "#0f766e",
+  themeHoverColor: "#115e59",
   users: [
     { key: "dor", displayName: "דור" },
     { key: "maayan", displayName: "מעיין" },
@@ -82,6 +89,49 @@ export const appConfig = {
     { key: "personalCare", emoji: "🧴", color: "purple" },
     { key: "household", emoji: "🏠", color: "lime" },
     { key: "general", emoji: "🛒", color: "slate", isSystem: true },
+  ],
+  newCategory: { color: "blue", emoji: "📦" },
+  emojiSuggestions: [
+    "🥛",
+    "🧀",
+    "🥚",
+    "🥬",
+    "🍎",
+    "🍌",
+    "🥕",
+    "🍅",
+    "🥔",
+    "🍗",
+    "🥩",
+    "🐟",
+    "🍞",
+    "🥐",
+    "🥫",
+    "🍝",
+    "🍚",
+    "🫒",
+    "🧂",
+    "🧊",
+    "🍦",
+    "🍫",
+    "🍪",
+    "🥤",
+    "☕",
+    "🍷",
+    "🧽",
+    "🧴",
+    "🧻",
+    "🧼",
+    "🏠",
+    "💡",
+    "🔋",
+    "💊",
+    "👶",
+    "🐶",
+    "🌸",
+    "🎉",
+    "🛒",
+    "📦",
   ],
   limits: {
     nameMaxLength: 60,

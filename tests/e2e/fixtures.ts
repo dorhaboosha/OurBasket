@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { test as base, expect, type Page } from "@playwright/test";
 import pg from "pg";
 import { E2E_BASE_URL, E2E_ENV } from "../../playwright.config";
+import { defaultCategoryRows } from "../../src/modules/categories/seed";
 
 export { expect };
 
@@ -23,6 +24,43 @@ export async function resetDatabase() {
     `TRUNCATE "purchase_record_item", "purchase_record", "product", "category", "list_state",
       "verification", "account", "session", "user" CASCADE`,
   );
+}
+
+/** What the database seed creates: the list_state row and the 12 default categories. */
+export async function seedDefaults() {
+  await db.query(`INSERT INTO list_state (id, revision) VALUES (1, 0) ON CONFLICT DO NOTHING`);
+  for (const row of defaultCategoryRows()) {
+    await db.query(
+      `INSERT INTO category (id, name, "normalizedName", color, icon, "sortOrder", "isSystem", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, now())`,
+      [
+        randomUUID(),
+        row.name,
+        row.normalizedName,
+        row.color,
+        row.icon,
+        row.sortOrder,
+        row.isSystem,
+      ],
+    );
+  }
+}
+
+/** Adds a product to the category with this name, as the list screen will (step 5). */
+export async function addProduct(categoryName: string, name: string) {
+  await db.query(
+    `INSERT INTO product (id, "categoryId", name, "normalizedName", quantity, "sortOrder", "updatedAt")
+     SELECT $1, id, $2, $3, 1, 0, now() FROM category WHERE name = $4`,
+    [randomUUID(), name, name.toLowerCase(), categoryName],
+  );
+}
+
+/** The category names in their saved order. */
+export async function savedCategoryNames() {
+  const { rows } = await db.query<{ name: string }>(
+    `SELECT name FROM category ORDER BY "sortOrder", "createdAt"`,
+  );
+  return rows.map((row) => row.name);
 }
 
 /** The value of a Better Auth session cookie: the token, signed with the app secret. */
