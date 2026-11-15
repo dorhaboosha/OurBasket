@@ -1,6 +1,7 @@
 import { Box, Center, Flex, Spinner } from "@chakra-ui/react";
 import { getTranslations } from "next-intl/server";
 import { Suspense, type ReactNode } from "react";
+import { Toaster } from "@/components/toaster";
 import { requireUser } from "@/modules/auth/current-user";
 import { AppHeader } from "./app-header";
 import { AppNav } from "./app-nav";
@@ -24,7 +25,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 // Children render only after the check passes; without a session requireUser redirects.
 async function SignedIn({ children }: { children: ReactNode }) {
   const user = await requireUser();
-  const t = await getTranslations("nav");
+  const t = await getTranslations();
 
   return (
     <Box minH="100vh">
@@ -32,10 +33,10 @@ async function SignedIn({ children }: { children: ReactNode }) {
       <Flex align="stretch" minH="calc(100vh - 3.5rem)">
         <AppNav
           labels={{
-            label: t("label"),
-            list: t("list"),
-            history: t("history"),
-            settings: t("settings"),
+            label: t("nav.label"),
+            list: t("nav.list"),
+            history: t("nav.history"),
+            settings: t("nav.settings"),
           }}
         />
         {/* On phones, room at the bottom for the fixed navigation bar. */}
@@ -43,6 +44,7 @@ async function SignedIn({ children }: { children: ReactNode }) {
           {children}
         </Box>
       </Flex>
+      <Toaster closeLabel={t("productForm.close")} />
     </Box>
   );
 }

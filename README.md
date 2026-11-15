@@ -4,10 +4,10 @@ A shared shopping list for two people (Dor and Maayan), in Hebrew and right-to-l
 One list, edited from any device, synced in real time, with categories, checked items,
 purchase history and export to WhatsApp text or a printable page.
 
-> **Status:** Steps 1–4 are done: the project setup (Next.js, Chakra UI in RTL, Hebrew
+> **Status:** Steps 1–5 are done: the project setup (Next.js, Chakra UI in RTL, Hebrew
 > text, tests, CI), the database (Prisma, tables, rules, seed), sign-in with Google for
-> the two allowed accounts, and the navigation with category management in the
-> settings. Next: products on the list (step 5). See
+> the two allowed accounts, the navigation with category management in the settings,
+> and the shopping list itself. Next: "update list" and purchase history (step 6). See
 > [`OurBasketSpec.md`](OurBasketSpec.md) for the full spec and the decision log (Hebrew).
 
 ## Tech stack
@@ -72,6 +72,17 @@ password.
 
 ## Screens
 
+- **The list:** the products by category, each category opened or closed with its header
+  (remembered on this device). Search filters as you type, in every category.
+  - Add a product with a name, a quantity (1–999) and a category (none means General).
+    Adding a product that's already listed adds up the quantities instead, up to 999.
+  - Check a product off: it is crossed out and goes to the bottom of its category.
+  - `-` and `+` change the quantity by one; presses from both phones all count. The
+    quantity can also be typed; 0 deletes the product.
+  - Edit a product's name, quantity or category, or delete it. A delete (also by `-` at 1
+    or a typed 0) shows "undo", which puts the product back where it was.
+  - Drag a product by its handle to reorder it, or into another category.
+  - "Clear list" deletes every product after asking. It isn't a purchase: history stays.
 - **Navigation:** a sidebar on computers and a bar at the bottom of the screen on
   phones, with the list, the history and the settings. The top bar shows the app's
   name and who is signed in.
@@ -163,13 +174,14 @@ src/
   app/                 routes: (app)/ = signed-in pages (list, history, settings,
                        with the navigation), login/, privacy/, api/auth (Better
                        Auth), icon.svg
-  components/          providers (Chakra, Emotion), shared dialog styles
+  components/          providers (Chakra, Emotion), toasts, shared dialog styles
   config/              app.config.ts and the contrast helper
   i18n/                next-intl setup (one fixed locale)
   lib/                 Prisma client, Better Auth server and client, name normalization
   modules/             domain logic: auth/ (allowlist, hooks, current user),
                        categories/ (validation, database actions, seed),
-                       list/ (the list revision)
+                       products/ (validation, database actions),
+                       list/ (revision, snapshot, how the screen shows it)
   proxy.ts             redirects to /login when there is no session cookie
   generated/           Prisma client (generated, not in git)
 messages/he.json       all UI text

@@ -46,11 +46,13 @@ export async function seedDefaults() {
   }
 }
 
-/** Adds a product to the category with this name, as the list screen will (step 5). */
+/** Adds a product at the end of the category with this name, as the app does. */
 export async function addProduct(categoryName: string, name: string) {
   await db.query(
     `INSERT INTO product (id, "categoryId", name, "normalizedName", quantity, "sortOrder", "updatedAt")
-     SELECT $1, id, $2, $3, 1, 0, now() FROM category WHERE name = $4`,
+     SELECT $1, c.id, $2, $3, 1,
+       (SELECT coalesce(max("sortOrder") + 1, 0) FROM product WHERE "categoryId" = c.id), now()
+     FROM category c WHERE c.name = $4`,
     [randomUUID(), name, name.toLowerCase(), categoryName],
   );
 }
