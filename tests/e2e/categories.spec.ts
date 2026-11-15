@@ -70,7 +70,7 @@ test("adds a category with a name, color and emoji, at the end", async ({ page }
   await dialog.getByLabel("שם").fill("  ציוד   למסיבה ");
   await dialog.getByRole("radio", { name: "ורוד" }).click();
   await dialog.getByRole("radio", { name: "🎉" }).click();
-  await expect(dialog.getByRole("radio", { name: "ורוד" })).toHaveAttribute("aria-checked", "true");
+  await expect(dialog.getByRole("radio", { name: "ורוד" })).toBeChecked();
   await expect(dialog.getByTestId("category-preview")).toContainText("🎉");
   await dialog.getByRole("button", { name: "הוספה" }).click();
 
@@ -132,7 +132,7 @@ test("edits a category, including the system one", async ({ page }) => {
   const dialog = page.getByRole("dialog", { name: "עריכת קטגוריה" });
 
   await expect(dialog.getByLabel("שם")).toHaveValue("כללי");
-  await expect(dialog.getByRole("radio", { name: "אפור" })).toHaveAttribute("aria-checked", "true");
+  await expect(dialog.getByRole("radio", { name: "אפור" })).toBeChecked();
   await dialog.getByLabel("שם").fill("שונות");
   await dialog.getByRole("radio", { name: "סגול" }).click();
   await dialog.getByRole("button", { name: "שמירה" }).click();
@@ -159,10 +159,35 @@ test("a save after someone else's edit is refused, then works with the latest", 
     dialog.getByText("הקטגוריה השתנתה בינתיים במכשיר אחר", { exact: false }),
   ).toBeVisible();
   await expect(rows(page).nth(7)).toContainText("🧃");
+  // The form now has the other device's emoji (untouched here), and still this name.
+  await expect(dialog.getByLabel("אימוג'י אחר")).toHaveValue("🧃");
+  await expect(dialog.getByLabel("שם")).toHaveValue("שתייה");
 
   await dialog.getByRole("button", { name: "שמירה" }).click();
   await expect(dialog).toHaveCount(0);
   await expect(rows(page).nth(7)).toContainText("שתייה");
+  // Saving again didn't undo the other device's change.
+  const { rows: saved } = await db.query(`SELECT name, icon FROM category WHERE name = 'שתייה'`);
+  expect(saved).toEqual([{ name: "שתייה", icon: "🧃" }]);
+});
+
+test("each picker is one Tab stop, and the arrow keys choose within it", async ({ page }) => {
+  await openSettings(page);
+  await openDialog(page, "הוספת קטגוריה");
+  const dialog = page.getByRole("dialog", { name: "קטגוריה חדשה" });
+
+  await dialog.getByLabel("שם").press("Tab");
+  await expect(dialog.getByRole("radio", { name: "כחול" })).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(dialog.getByRole("radio", { name: "תכלת" })).toBeFocused();
+  await expect(dialog.getByRole("radio", { name: "תכלת" })).toBeChecked();
+
+  // One Tab leaves the 12 colors for the chosen emoji.
+  await page.keyboard.press("Tab");
+  await expect(dialog.getByRole("radio", { name: "📦" })).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await expect(dialog.getByRole("radio", { name: "🛒" })).toBeChecked();
+  await expect(dialog.getByTestId("category-preview")).toContainText("🛒");
 });
 
 test("deleting asks first, says how many products go too, and can be cancelled", async ({

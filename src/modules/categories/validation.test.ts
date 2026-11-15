@@ -52,14 +52,17 @@ describe("validateCategory", () => {
 });
 
 describe("isSingleEmoji", () => {
-  it.each(["🥛", "☕", "👨‍👩‍👧", "👍🏽", "🇮🇱", "❤️", ...appConfig.emojiSuggestions])(
+  it.each(["🥛", "☕", "👨‍👩‍👧", "👍🏽", "🇮🇱", "❤️", "1️⃣", "#️⃣", "*️⃣", ...appConfig.emojiSuggestions])(
     "accepts %s",
     (emoji) => {
       expect(isSingleEmoji(emoji)).toBe(true);
     },
   );
 
-  it.each(["", "a", "א", "1", "🥛🥛", "🥛a", " ", "<b>"])("rejects %j", (value) => {
-    expect(isSingleEmoji(value)).toBe(false);
-  });
+  it.each(["", "a", "א", "1", "#", "1\u20e3\u20e3", "1️⃣2️⃣", "🥛🥛", "🥛a", " ", "<b>"])(
+    "rejects %j",
+    (value) => {
+      expect(isSingleEmoji(value)).toBe(false);
+    },
+  );
 });

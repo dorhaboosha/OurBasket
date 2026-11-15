@@ -30,11 +30,14 @@ export function nameLength(name: string): number {
   return [...name].length;
 }
 
-/** One emoji: a single visible character that is a pictograph (or a flag). */
+/** A keycap emoji: a digit, # or *, then the keycap mark (1️⃣ #️⃣ *️⃣). */
+const KEYCAP = /^[0-9#*]\uFE0F?\u20E3$/u;
+
+/** One emoji: a single visible character that is a pictograph, a flag or a keycap. */
 export function isSingleEmoji(value: string): boolean {
   if (!value || value.length > ICON_MAX_LENGTH) return false;
   if ([...graphemes.segment(value)].length !== 1) return false;
-  return /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(value);
+  return /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(value) || KEYCAP.test(value);
 }
 
 export function validateCategory(input: unknown): CategoryValidation {

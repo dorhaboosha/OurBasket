@@ -15,7 +15,7 @@ import {
 } from "@chakra-ui/react";
 import { Check } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useId, useRef, useState } from "react";
+import { type ComponentProps, useId, useRef, useState } from "react";
 import { dialogFromMdUp } from "@/components/dialog-styles";
 import type { PaletteColor } from "@/config/app.config";
 import type { CategoryItem } from "@/modules/categories/categories";
@@ -54,6 +54,24 @@ export function CategoryFormDialog({
   const [customIcon, setCustomIcon] = useState(
     emojiSuggestions.includes(initial.icon) ? "" : initial.icon,
   );
+  // What the form started from. When the category changes under the form (someone else
+  // saved it, and a refused save reloaded it), a field the user hasn't touched takes the
+  // new value, so saving again never undoes the other person's change to it.
+  const [base, setBase] = useState({ ...initial, version: category?.version });
+  if (category && category.version !== base.version) {
+    if (name === base.name) setName(category.name);
+    if (color === base.color) setColor(category.color);
+    if (icon === base.icon) {
+      setIcon(category.icon);
+      setCustomIcon(emojiSuggestions.includes(category.icon) ? "" : category.icon);
+    }
+    setBase({
+      name: category.name,
+      color: category.color,
+      icon: category.icon,
+      version: category.version,
+    });
+  }
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<CategoryField, string>>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -150,20 +168,14 @@ export function CategoryFormDialog({
                   <Text id={`${id}-color`} fontWeight="medium">
                     {t("categoryForm.color")}
                   </Text>
+                  {/* Native radios: one Tab stop for the group, arrows move between colors. */}
                   <HStack gap="2" wrap="wrap" role="radiogroup" aria-labelledby={`${id}-color`}>
                     {palette.map((swatch) => {
                       const selected = swatch.key === color;
                       return (
-                        <chakra.button
+                        <chakra.label
                           key={swatch.key}
-                          type="button"
-                          role="radio"
-                          aria-checked={selected}
-                          aria-label={t(`colors.${swatch.key}`)}
-                          onClick={() => {
-                            setColor(swatch.key);
-                            clearError("color");
-                          }}
+                          position="relative"
                           bg={swatch.value}
                           color="white"
                           w="11"
@@ -175,10 +187,20 @@ export function CategoryFormDialog({
                           outline={selected ? "3px solid" : undefined}
                           outlineColor="fg"
                           outlineOffset="2px"
-                          cursor="pointer"
+                          css={focusRing}
                         >
+                          <RadioInput
+                            name={`${id}-color`}
+                            value={swatch.key}
+                            checked={selected}
+                            aria-label={t(`colors.${swatch.key}`)}
+                            onChange={() => {
+                              setColor(swatch.key);
+                              clearError("color");
+                            }}
+                          />
                           {selected && <Check aria-hidden size={22} strokeWidth={3} />}
-                        </chakra.button>
+                        </chakra.label>
                       );
                     })}
                   </HStack>
@@ -197,28 +219,37 @@ export function CategoryFormDialog({
                     {emojiSuggestions.map((emoji) => {
                       const selected = !customIcon && emoji === icon;
                       return (
-                        <chakra.button
+                        <chakra.label
                           key={emoji}
-                          type="button"
-                          role="radio"
-                          aria-checked={selected}
-                          onClick={() => {
-                            setIcon(emoji);
-                            setCustomIcon("");
-                            clearError("icon");
-                          }}
+                          position="relative"
                           w="11"
                           h="11"
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="center"
                           fontSize="2xl"
                           borderRadius="md"
-                          borderWidth="2px"
-                          borderColor={selected ? "brand" : "transparent"}
+                          // An outline, not a border: a border would shrink the 44px tap area.
+                          outline={selected ? "2px solid" : undefined}
+                          outlineColor="brand"
+                          outlineOffset="-2px"
                           bg={selected ? "bg.muted" : undefined}
                           _hover={{ bg: "bg.muted" }}
-                          cursor="pointer"
+                          css={focusRing}
                         >
-                          {emoji}
-                        </chakra.button>
+                          <RadioInput
+                            name={`${id}-icon`}
+                            value={emoji}
+                            checked={selected}
+                            aria-label={emoji}
+                            onChange={() => {
+                              setIcon(emoji);
+                              setCustomIcon("");
+                              clearError("icon");
+                            }}
+                          />
+                          <span aria-hidden>{emoji}</span>
+                        </chakra.label>
                       );
                     })}
                   </HStack>
@@ -230,7 +261,7 @@ export function CategoryFormDialog({
                         setCustomIcon(event.target.value);
                         clearError("icon");
                         const typed = event.target.value.trim();
-                        setIcon(typed || initial.icon);
+                        setIcon(typed || base.icon);
                       }}
                       maxLength={32}
                       autoComplete="off"
@@ -289,5 +320,34 @@ export function CategoryFormDialog({
         </Dialog.Positioner>
       </Portal>
     </Dialog.Root>
+  );
+}
+
+/** A keyboard focus ring around a swatch, drawn on its label when its radio has focus. */
+const focusRing = {
+  "&:has(input:focus-visible)": {
+    outline: "3px solid",
+    outlineColor: "var(--chakra-colors-blue-600)",
+    outlineOffset: "2px",
+  },
+} as const;
+
+/**
+ * A native radio stretched invisibly over its swatch: the browser gives the group one Tab
+ * stop and arrow-key selection, and the whole swatch is the tap target.
+ */
+function RadioInput(props: ComponentProps<"input">) {
+  return (
+    <chakra.input
+      type="radio"
+      position="absolute"
+      inset="0"
+      w="full"
+      h="full"
+      m="0"
+      opacity="0"
+      cursor="pointer"
+      {...props}
+    />
   );
 }

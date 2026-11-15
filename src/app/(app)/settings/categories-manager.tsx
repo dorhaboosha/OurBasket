@@ -101,7 +101,9 @@ export function CategoriesManager({
   };
 
   function reorder({ active, over }: DragEndEvent) {
-    if (!over || active.id === over.id) return;
+    // One reorder at a time (the handles are disabled meanwhile), so a failed save
+    // rolls back to the order it started from, never one saved in between.
+    if (saving || !over || active.id === over.id) return;
     const next = arrayMove(items, positionOf(active.id) - 1, positionOf(over.id) - 1);
     setItems(next);
     setNotice(null);
@@ -152,6 +154,7 @@ export function CategoriesManager({
                 key={category.id}
                 category={category}
                 color={colorOf(category.color)}
+                reorderDisabled={saving}
                 onEdit={() => {
                   setNotice(null);
                   setDialog({ kind: "edit", id: category.id });
@@ -235,11 +238,14 @@ export function CategoriesManager({
 function CategoryRow({
   category,
   color,
+  reorderDisabled,
   onEdit,
   onDelete,
 }: {
   category: CategoryItem;
   color: string;
+  /** While the last reorder is being saved. */
+  reorderDisabled: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -252,7 +258,7 @@ function CategoryRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: category.id });
+  } = useSortable({ id: category.id, disabled: reorderDisabled });
 
   return (
     <HStack
