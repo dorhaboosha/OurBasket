@@ -10,6 +10,7 @@ type Props = {
   /** Always the latest loaded version, so the product count is current. */
   category: CategoryItem;
   onClose: () => void;
+  onDeleted: () => void;
   /** Deleted meanwhile: close, and show this message on the page. */
   onGone: (message: string) => void;
 };
@@ -18,7 +19,7 @@ type Props = {
  * Asks before deleting a category, with its name and how many products go with it
  * (spec 7.3). Focus starts on "cancel", so Enter alone never deletes.
  */
-export function DeleteCategoryDialog({ category, onClose, onGone }: Props) {
+export function DeleteCategoryDialog({ category, onClose, onDeleted, onGone }: Props) {
   const t = useTranslations();
   const cancelRef = useRef<HTMLButtonElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +35,7 @@ export function DeleteCategoryDialog({ category, onClose, onGone }: Props) {
         category.productCount,
       );
       if (result.ok) {
-        onClose();
+        onDeleted();
         return;
       }
       if (result.reason === "notFound") onGone(result.message);

@@ -19,7 +19,7 @@ import { useId, useRef, useState } from "react";
 import { dialogFromMdUp } from "@/components/dialog-styles";
 import type { PaletteColor } from "@/config/app.config";
 import type { CategoryItem } from "@/modules/categories/categories";
-import type { CategoryField } from "@/modules/categories/validation";
+import { type CategoryField, isSingleEmoji } from "@/modules/categories/validation";
 import { createCategoryAction, updateCategoryAction } from "./actions";
 
 type Props = {
@@ -59,6 +59,19 @@ export function CategoryFormDialog({
   const [pending, setPending] = useState(false);
 
   const colorValue = palette.find((swatch) => swatch.key === color)?.value;
+  // The preview shows only a real emoji; while a typed one isn't, the last good one.
+  const [previewIcon, setPreviewIcon] = useState(initial.icon);
+  if (isSingleEmoji(icon) && icon !== previewIcon) setPreviewIcon(icon);
+
+  /** An error goes away as soon as its field is changed. */
+  function clearError(field: CategoryField) {
+    if (fieldErrors[field])
+      setFieldErrors((errors) => {
+        const rest = { ...errors };
+        delete rest[field];
+        return rest;
+      });
+  }
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
@@ -122,7 +135,10 @@ export function CategoryFormDialog({
                   <Input
                     ref={nameRef}
                     value={name}
-                    onChange={(event) => setName(event.target.value)}
+                    onChange={(event) => {
+                      setName(event.target.value);
+                      clearError("name");
+                    }}
                     maxLength={nameMaxLength}
                     autoComplete="off"
                     size="lg"
@@ -144,7 +160,10 @@ export function CategoryFormDialog({
                           role="radio"
                           aria-checked={selected}
                           aria-label={t(`colors.${swatch.key}`)}
-                          onClick={() => setColor(swatch.key)}
+                          onClick={() => {
+                            setColor(swatch.key);
+                            clearError("color");
+                          }}
                           bg={swatch.value}
                           color="white"
                           w="11"
@@ -186,6 +205,7 @@ export function CategoryFormDialog({
                           onClick={() => {
                             setIcon(emoji);
                             setCustomIcon("");
+                            clearError("icon");
                           }}
                           w="11"
                           h="11"
@@ -208,6 +228,7 @@ export function CategoryFormDialog({
                       value={customIcon}
                       onChange={(event) => {
                         setCustomIcon(event.target.value);
+                        clearError("icon");
                         const typed = event.target.value.trim();
                         setIcon(typed || initial.icon);
                       }}
@@ -236,9 +257,9 @@ export function CategoryFormDialog({
                     data-testid="category-preview"
                   >
                     <Text fontSize="2xl" aria-hidden lineHeight="1">
-                      {icon}
+                      {previewIcon}
                     </Text>
-                    <Text fontWeight="medium" truncate>
+                    <Text fontWeight="medium" overflowWrap="anywhere">
                       {name.trim() || " "}
                     </Text>
                   </HStack>

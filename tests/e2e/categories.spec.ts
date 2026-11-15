@@ -96,6 +96,8 @@ test("explains what's wrong with a name, and keeps the form open", async ({ page
   await expect(name).toHaveAttribute("aria-invalid", "true");
 
   await name.fill(" משקאות ");
+  // The error goes away as soon as the field changes.
+  await expect(dialog.getByText("צריך לתת לקטגוריה שם.")).toHaveCount(0);
   await dialog.getByRole("button", { name: "הוספה" }).click();
   await expect(dialog.getByText("כבר יש קטגוריה בשם הזה.")).toBeVisible();
   await expect(name).toBeFocused();
@@ -110,10 +112,14 @@ test("a typed emoji works, and anything else is refused", async ({ page }) => {
   const custom = dialog.getByLabel("אימוג'י אחר");
 
   await custom.fill("abc");
+  await expect(dialog.getByTestId("category-preview")).toContainText("📦");
+  await expect(dialog.getByTestId("category-preview")).not.toContainText("abc");
   await dialog.getByRole("button", { name: "הוספה" }).click();
   await expect(dialog.getByText("בחרו אימוג'י אחד.")).toBeVisible();
 
   await custom.fill("🥨");
+  await expect(dialog.getByText("בחרו אימוג'י אחד.")).toHaveCount(0);
+  await expect(dialog.getByTestId("category-preview")).toContainText("🥨");
   await expect(dialog.getByRole("radio", { checked: true, name: "📦" })).toHaveCount(0);
   await dialog.getByRole("button", { name: "הוספה" }).click();
   await expect(dialog).toHaveCount(0);
@@ -181,6 +187,8 @@ test("deleting asks first, says how many products go too, and can be cancelled",
   await expect(page.getByRole("alertdialog")).toHaveCount(0);
   await expect(rows(page)).toHaveCount(11);
   await expect(list(page)).not.toContainText("מוצרי חלב");
+  // Keyboard focus isn't lost with the deleted row.
+  await expect(page.getByRole("button", { name: "הוספת קטגוריה" })).toBeFocused();
   const { rows: products } = await db.query(`SELECT name FROM product`);
   expect(products).toEqual([{ name: "מים" }]);
 });
@@ -241,4 +249,12 @@ test("moves a category by dragging its handle", async ({ page }) => {
 
   await expect(rows(page).first()).toContainText("בשר, עוף ודגים");
   await expect.poll(async () => (await savedCategoryNames())[0]).toBe("בשר, עוף ודגים");
+});
+
+test("a long name wraps on a phone instead of being cut off @mobile", async ({ page }) => {
+  await openSettings(page);
+  const row = rows(page).filter({ hasText: "מוצרי טיפוח והיגיינה" });
+  const name = row.getByText("מוצרי טיפוח והיגיינה", { exact: true });
+  // Fully shown: nothing hidden past the element's edge.
+  expect(await name.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
 });

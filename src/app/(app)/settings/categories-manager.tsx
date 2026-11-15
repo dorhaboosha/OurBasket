@@ -22,7 +22,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Pencil, Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useId, useState, useTransition } from "react";
+import { useId, useRef, useState, useTransition } from "react";
 import type { PaletteColor } from "@/config/app.config";
 import type { CategoryItem } from "@/modules/categories/categories";
 import { reorderCategoriesAction } from "./actions";
@@ -61,6 +61,7 @@ export function CategoriesManager({
   const [dialog, setDialog] = useState<OpenDialog | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
+  const addButtonRef = useRef<HTMLButtonElement>(null);
 
   const sensors = useSensors(
     // A few pixels of movement first, so a tap on the handle isn't a drag.
@@ -178,6 +179,7 @@ export function CategoriesManager({
       )}
 
       <Button
+        ref={addButtonRef}
         alignSelf="start"
         size="lg"
         bg="brand"
@@ -217,6 +219,12 @@ export function CategoriesManager({
         <DeleteCategoryDialog
           category={target}
           onClose={() => setDialog(null)}
+          onDeleted={() => {
+            setDialog(null);
+            // The delete button is gone with its row: keep keyboard focus on the list's
+            // part of the page, after the dialog has given focus back.
+            setTimeout(() => addButtonRef.current?.focus(), 0);
+          }}
           onGone={closeWithNotice}
         />
       )}
@@ -281,7 +289,8 @@ function CategoryRow({
         {category.icon}
       </Text>
       <Stack gap="0" flex="1" minW="0" ps="2" py="1">
-        <Text fontWeight="medium" truncate>
+        {/* Wraps rather than cuts off: long names must be readable on a phone. */}
+        <Text fontWeight="medium" overflowWrap="anywhere">
           {category.name}
         </Text>
         <HStack gap="2" rowGap="1" wrap="wrap">
