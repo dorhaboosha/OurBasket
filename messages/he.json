@@ -207,6 +207,7 @@
   "productMessages": {
     "added": "{name} נוסף לרשימה.",
     "restored": "{name} הוחזר לרשימה.",
+    "saved": "השינויים ב{name} נשמרו.",
     "merged": "{name} כבר ברשימה, ב{category}: הכמות עודכנה ל-{quantity}.",
     "mergedCapped": "{name} כבר ברשימה, ב{category}: הכמות הוגבלה ל-{quantity}, המקסימום.",
     "deleted": "{name} נמחק מהרשימה.",

@@ -91,7 +91,8 @@ test.describe("adding", () => {
     await openList(page);
     await addThroughForm(page, "  coca   COLA ", "2", "🥛 מוצרי חלב");
 
-    await expect(page.getByText("coca COLA כבר ברשימה, במשקאות: הכמות עודכנה ל-3.")).toBeVisible();
+    // The name as listed, not as typed.
+    await expect(page.getByText("Coca Cola כבר ברשימה, במשקאות: הכמות עודכנה ל-3.")).toBeVisible();
     await expect(rows(page)).toHaveCount(1);
     expect(await saved("Coca Cola")).toEqual([
       { quantity: 3, isChecked: false, category: "משקאות" },
@@ -111,8 +112,15 @@ test.describe("adding", () => {
     await openList(page);
     const dialog = await openAddDialog(page);
     await dialog.getByLabel("כמות").fill("2.5");
+    let requests = 0;
+    page.on("request", (request) => {
+      if (request.method() === "POST") requests += 1;
+    });
     await dialog.getByRole("button", { name: "הוספה" }).click();
     await expect(dialog.getByText("צריך לתת למוצר שם.")).toBeVisible();
+    // Caught in the form: no request, and no toast over the dialog's buttons.
+    expect(requests).toBe(0);
+    await expect(page.getByText("יש שדות שצריך לתקן.")).toHaveCount(0);
     await expect(dialog.getByText("כמות היא מספר שלם מ-1 עד 999.")).toBeVisible();
     await expect(dialog.getByLabel("שם המוצר")).toBeFocused();
 
@@ -179,6 +187,13 @@ test.describe("quantities", () => {
     await expect(rows(page)).toHaveCount(0);
     await page.getByRole("button", { name: "בטל" }).click();
     await expect.poll(async () => (await saved("סוללות"))[0]?.quantity).toBe(7);
+    await expect(page.getByText("סוללות הוחזר לרשימה.")).toBeVisible();
+
+    // One message at a time: deleting again replaces "put back".
+    await quantity(page, "סוללות").fill("0");
+    await quantity(page, "סוללות").press("Enter");
+    await expect(page.getByText("סוללות נמחק מהרשימה.")).toBeVisible();
+    await expect(page.getByText("סוללות הוחזר לרשימה.")).toHaveCount(0);
   });
 
   test("a typed quantity after a change elsewhere shows the latest one", async ({ page }) => {
@@ -251,6 +266,7 @@ test.describe("editing", () => {
     await dialog.getByRole("button", { name: "שמירה" }).click();
 
     await expect(dialog).toHaveCount(0);
+    await expect(page.getByText("השינויים בחלב שקדים נשמרו.")).toBeVisible();
     await expect.poll(() => namesIn(page, "משקאות")).toEqual(["מים", "חלב שקדים"]);
     await expect(section(page, "מוצרי חלב")).toHaveCount(0);
     expect(await saved("חלב שקדים")).toEqual([
@@ -266,6 +282,7 @@ test.describe("editing", () => {
     await dialog.getByLabel("שם המוצר").fill(" חלב ");
     await dialog.getByRole("button", { name: "שמירה" }).click();
     await expect(dialog.getByText("המוצר כבר קיים ברשימה.")).toBeVisible();
+    await expect(page.getByText("המוצר כבר קיים ברשימה.")).toHaveCount(1);
     await expect(dialog.getByLabel("שם המוצר")).toBeFocused();
     expect(await saved("גבינה")).toHaveLength(1);
   });
@@ -330,6 +347,7 @@ test.describe("search and categories", () => {
     await expect(page.getByText('אין מוצרים שמתאימים ל"אין כזה".')).toBeVisible();
     await page.getByRole("button", { name: "ניקוי החיפוש" }).last().click();
     await expect(page.getByRole("searchbox", { name: "חיפוש מוצר" })).toHaveValue("");
+    await expect(page.getByRole("searchbox", { name: "חיפוש מוצר" })).toBeFocused();
     // Closed again after the search: the choice is kept.
     await expect(row(page, "חלב")).toBeHidden();
   });
@@ -363,6 +381,7 @@ test.describe("clearing the list", () => {
     await page.getByRole("button", { name: "נקה רשימה" }).click();
     await page.getByRole("alertdialog").getByRole("button", { name: "ניקוי הרשימה" }).click();
     await expect(page.getByTestId("empty-list")).toBeVisible();
+    await expect(page.getByText("הרשימה נוקתה.")).toBeVisible();
     expect((await db.query(`SELECT 1 FROM product`)).rowCount).toBe(0);
     expect((await db.query(`SELECT 1 FROM purchase_record`)).rowCount).toBe(1);
   });

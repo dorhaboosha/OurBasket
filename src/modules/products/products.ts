@@ -42,7 +42,7 @@ export type DeletedProduct = {
 export type AddOutcome =
   | { kind: "created" }
   /** Already on the list: the quantities were added up, in the product's own category. */
-  | { kind: "merged"; quantity: number; capped: boolean; categoryName: string };
+  | { kind: "merged"; name: string; quantity: number; capped: boolean; categoryName: string };
 
 /**
  * Adds a product (spec 8.1, 8.2). If one with the same normalized name is already on the
@@ -318,8 +318,10 @@ async function mergeIntoExisting(
   normalizedName: string,
   quantity: number,
 ): Promise<AddOutcome | null> {
-  const [existing] = await tx.$queryRaw<{ id: string; quantity: number; categoryId: string }[]>`
-    SELECT id, quantity, "categoryId" FROM product
+  const [existing] = await tx.$queryRaw<
+    { id: string; name: string; quantity: number; categoryId: string }[]
+  >`
+    SELECT id, name, quantity, "categoryId" FROM product
     WHERE "normalizedName" = ${normalizedName} FOR UPDATE`;
   if (!existing) return null;
   const total = Math.min(existing.quantity + quantity, MAX);
@@ -334,6 +336,8 @@ async function mergeIntoExisting(
   });
   return {
     kind: "merged",
+    // The name as listed, not as just typed ("QA חלב", not "qa חלב").
+    name: existing.name,
     quantity: total,
     capped: existing.quantity + quantity > MAX,
     categoryName: category.name,

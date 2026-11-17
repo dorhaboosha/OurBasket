@@ -32,7 +32,15 @@ import {
 } from "@dnd-kit/sortable";
 import { ChevronDown, Plus, Search, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { type ReactNode, useEffect, useId, useOptimistic, useState, useTransition } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useId,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { toaster } from "@/components/toaster";
 import type { PaletteColor } from "@/config/app.config";
 import type { DeletedProduct } from "@/modules/products/products";
@@ -89,6 +97,7 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
   const [shown, showOptimistic] = useOptimistic(list, applyOptimistic);
   const [, startTransition] = useTransition();
   const [search, setSearch] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
   const [collapsed, toggleCollapsed] = useCollapsed();
   const [dialog, setDialog] = useState<OpenDialog | null>(null);
   const [drag, setDrag] = useState<{ containers: Containers; start: Containers } | null>(null);
@@ -105,14 +114,18 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
     setList((current) => (next.revision >= current.revision ? next : current));
   }
 
-  /** Shows an action's answer: its list, and its message (with "undo" after a delete). */
-  function report(result: ListActionResult) {
+  /**
+   * Shows an action's answer: its list, and its message (with "undo" after a delete). A
+   * dialog shows its own errors, so they aren't repeated in a toast over its buttons.
+   */
+  function report(result: ListActionResult, fromDialog = false) {
     apply(result.list);
     if (!result.ok) {
-      toaster.create({ type: "error", title: result.message, closable: true });
+      if (fromDialog) return;
+      say({ type: "error", title: result.message, closable: true });
     } else if (result.message) {
       const undo = result.undo;
-      toaster.create({
+      say({
         type: undo ? "info" : "success",
         title: result.message,
         closable: true,
@@ -130,9 +143,24 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
         const result = await action();
         startTransition(() => report(result));
       } catch {
-        toaster.create({ type: "error", title: t("home.generic"), closable: true });
+        say({ type: "error", title: t("home.generic"), closable: true });
       }
     });
+  }
+
+  /**
+   * One message at a time: a new one replaces the last, so "put back" and "deleted" never
+   * show together.
+   */
+  function say(options: Parameters<typeof toaster.create>[0]) {
+    toaster.dismiss();
+    toaster.create(options);
+  }
+
+  function clearSearch() {
+    setSearch("");
+    // Back to the field, not lost on the page (the clear button itself goes away).
+    searchRef.current?.focus();
   }
 
   function restore(deleted: DeletedProduct) {
@@ -233,7 +261,7 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
                 variant="ghost"
                 size="lg"
                 me="-2"
-                onClick={() => setSearch("")}
+                onClick={clearSearch}
               >
                 <X aria-hidden />
               </IconButton>
@@ -241,6 +269,7 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
           }
         >
           <Input
+            ref={searchRef}
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -291,7 +320,7 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
       ) : sections.length === 0 ? (
         <Stack align="center" textAlign="center" gap="3" py="8" role="status">
           <Text>{t("home.noResults", { query: search.trim() })}</Text>
-          <Button size="lg" variant="outline" onClick={() => setSearch("")}>
+          <Button size="lg" variant="outline" onClick={clearSearch}>
             {t("home.clearSearch")}
           </Button>
         </Stack>
@@ -348,7 +377,7 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
                       onTypeQuantity={(text) => {
                         const quantity = parseQuantity(text);
                         if (quantity === null || quantity > quantityMax) {
-                          toaster.create({
+                          say({
                             type: "error",
                             title: t("productErrors.quantityTyped", { max: quantityMax }),
                             closable: true,
@@ -377,7 +406,7 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
         <ProductFormDialog
           categories={shown.categories}
           onClose={() => setDialog(null)}
-          onResult={(result) => startTransition(() => report(result))}
+          onResult={(result) => startTransition(() => report(result, true))}
         />
       )}
       {dialog?.kind === "edit" && editing && (
@@ -385,7 +414,7 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
           product={editing}
           categories={shown.categories}
           onClose={() => setDialog(null)}
-          onResult={(result) => startTransition(() => report(result))}
+          onResult={(result) => startTransition(() => report(result, true))}
         />
       )}
       {dialog?.kind === "clear" && (
@@ -393,7 +422,7 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
           productCount={productCount}
           revision={list.revision}
           onClose={() => setDialog(null)}
-          onResult={(result) => startTransition(() => apply(result.list))}
+          onResult={(result) => startTransition(() => report(result, true))}
         />
       )}
     </Stack>

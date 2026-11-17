@@ -95,6 +95,17 @@ export function ProductFormDialog({ product, categories, onClose, onResult }: Pr
 
   function save(event: React.FormEvent) {
     event.preventDefault();
+    // Obvious mistakes are shown at once, without a request (and without "saving...").
+    // The server checks everything again.
+    const errors: Partial<Record<ProductField, string>> = {};
+    if (!name.trim()) errors.name = t("productErrors.nameRequired");
+    const typed = /^\s*\d{1,3}\s*$/.test(quantity) ? Number(quantity) : NaN;
+    if (!(typed >= 1)) errors.quantity = t("productErrors.quantityInvalid", { maxQuantity: 999 });
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      if (errors.name) nameRef.current?.focus();
+      return;
+    }
     // Only digits count as a number: "2.5" or "" is sent as is and refused by the server.
     const input = {
       name,

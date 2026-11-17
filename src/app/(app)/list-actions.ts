@@ -72,7 +72,9 @@ export async function updateProductAction(
   const validation = validateProduct(input);
   if (!validation.ok) return fieldErrors(validation.errors);
   const result = await updateProduct(id, expectedVersion, validation.draft);
-  return result.ok ? success() : failure(result.reason);
+  if (!result.ok) return failure(result.reason);
+  const t = await getTranslations("productMessages");
+  return success(t("saved", { name: validation.draft.name }));
 }
 
 /** The + and - buttons. */
@@ -225,7 +227,7 @@ async function addedMessage(name: string, outcome: AddOutcome, created: "added" 
   const t = await getTranslations("productMessages");
   if (outcome.kind === "created") return t(created, { name });
   return t(outcome.capped ? "mergedCapped" : "merged", {
-    name,
+    name: outcome.name,
     category: outcome.categoryName,
     quantity: outcome.quantity,
   });

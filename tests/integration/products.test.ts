@@ -82,6 +82,7 @@ describe("addProduct", () => {
     const result = await addProduct(draft("  coca   COLA ", 3, await categoryId("משקאות")));
     expect(result).toEqual({
       kind: "merged",
+      name: "Coca Cola",
       quantity: 5,
       capped: false,
       categoryName: "מוצרי חלב",
