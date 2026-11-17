@@ -1,4 +1,5 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+import { contrastRatio } from "../../src/config/contrast";
 import {
   accessibilityViolations,
   addProduct,
@@ -100,6 +101,7 @@ test.describe("the list with products", () => {
     ["the add product form", "הוספת מוצר"],
     ["the edit product form", "עריכת חלב"],
     ["the clear list question", "נקה רשימה"],
+    ["the update list question", "עדכון רשימה"],
   ];
 
   for (const [name, button] of LIST_DIALOGS) {
@@ -127,7 +129,46 @@ test.describe("the list with products", () => {
     expect(await accessibilityViolations(page)).toEqual([]);
     if (testInfo.project.name === "mobile") expect(await smallTouchTargets(page)).toEqual([]);
   });
+
+  test("a success message passes the accessibility checks @mobile", async ({ page }) => {
+    await openList(page);
+    await page.getByRole("button", { name: "עדכון רשימה" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "עדכון רשימה" }).click();
+    const message = page.getByText("נרשם בהיסטוריית הקניות", { exact: false });
+    await expect(message).toBeVisible();
+    expect(await accessibilityViolations(page)).toEqual([]);
+    expect(await toastContrast(message)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test("an error message passes the accessibility checks @mobile", async ({ page }) => {
+    await openList(page);
+    const field = page.getByRole("textbox", { name: "כמות של סוללות" });
+    await field.fill("abc");
+    await field.press("Enter");
+    const message = page.getByText("כמות היא מספר שלם", { exact: false });
+    await expect(message).toBeVisible();
+    expect(await accessibilityViolations(page)).toEqual([]);
+    expect(await toastContrast(message)).toBeGreaterThanOrEqual(4.5);
+  });
 });
+
+/**
+ * The contrast of a toast's text with its background. axe skips toasts ("overlapped by
+ * another element"), so this reads the colors the browser actually shows.
+ */
+async function toastContrast(text: Locator) {
+  const [color, background] = await text.evaluate((element) => {
+    const toast = element.closest("[data-type]") ?? element;
+    return [getComputedStyle(element).color, getComputedStyle(toast).backgroundColor];
+  });
+  const hex = (rgb: string) =>
+    "#" +
+    (rgb.match(/\d+/g) ?? [])
+      .slice(0, 3)
+      .map((value) => Number(value).toString(16).padStart(2, "0"))
+      .join("");
+  return contrastRatio(hex(color), hex(background));
+}
 
 async function openList(page: Page) {
   await page.goto("/");

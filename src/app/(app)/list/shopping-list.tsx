@@ -30,7 +30,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { ChevronDown, Plus, Search, X } from "lucide-react";
+import { ChevronDown, ListChecks, Plus, Search, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
   type ReactNode,
@@ -65,6 +65,7 @@ import {
   setQuantityAction,
 } from "../list-actions";
 import { ClearListDialog } from "./clear-list-dialog";
+import { UpdateListDialog } from "./update-list-dialog";
 import { ProductFormDialog } from "./product-form-dialog";
 import { ProductRow } from "./product-row";
 
@@ -78,7 +79,9 @@ type OpenDialog =
   | { kind: "add" }
   | { kind: "edit"; id: string }
   /** The list as it was when the question was asked: only that list is cleared. */
-  | { kind: "clear"; revision: number; productCount: number };
+  | { kind: "clear"; revision: number; productCount: number }
+  /** The products checked when the question was asked: only those can be bought. */
+  | { kind: "update"; checkedIds: string[] };
 
 /** Which categories are closed on this device (spec 6.4): not synced between users. */
 const COLLAPSED_KEY = "ourbasket:collapsed-categories";
@@ -108,6 +111,9 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
 
   const searching = search.trim() !== "";
   const productCount = shown.categories.reduce((sum, c) => sum + c.products.length, 0);
+  const checkedIds = shown.categories.flatMap((category) =>
+    category.products.filter((product) => product.isChecked).map((product) => product.id),
+  );
   const dragged = drag ? withContainers(shown, drag.containers) : shown;
   const sections = drag
     ? dragged.categories.filter((category) => category.id in drag.containers)
@@ -301,6 +307,20 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
           {t("home.add")}
         </Button>
         {productCount > 0 && (
+          // Disabled until something is checked off (spec 9.1).
+          <Button
+            size="lg"
+            variant="outline"
+            color="brand"
+            borderColor="brand"
+            disabled={checkedIds.length === 0}
+            onClick={() => setDialog({ kind: "update", checkedIds })}
+          >
+            <ListChecks aria-hidden />
+            {t("home.updateList")}
+          </Button>
+        )}
+        {productCount > 0 && (
           <Button
             size="lg"
             variant="outline"
@@ -429,6 +449,13 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
         <ProductFormDialog
           product={editing}
           categories={shown.categories}
+          onClose={() => setDialog(null)}
+          onResult={(result) => startTransition(() => report(result, true))}
+        />
+      )}
+      {dialog?.kind === "update" && (
+        <UpdateListDialog
+          checkedIds={dialog.checkedIds}
           onClose={() => setDialog(null)}
           onResult={(result) => startTransition(() => report(result, true))}
         />
