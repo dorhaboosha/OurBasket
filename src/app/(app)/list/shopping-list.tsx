@@ -74,7 +74,11 @@ type Props = {
   quantityMax: number;
 };
 
-type OpenDialog = { kind: "add" } | { kind: "edit"; id: string } | { kind: "clear" };
+type OpenDialog =
+  | { kind: "add" }
+  | { kind: "edit"; id: string }
+  /** The list as it was when the question was asked: only that list is cleared. */
+  | { kind: "clear"; revision: number; productCount: number };
 
 /** Which categories are closed on this device (spec 6.4): not synced between users. */
 const COLLAPSED_KEY = "ourbasket:collapsed-categories";
@@ -209,14 +213,20 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
     setDrag(null);
     if (!current || !over) return;
     const id = String(active.id);
-    const containers = moveBetween(current.containers, id, String(over.id));
-    const to = containerOf(containers, id);
     const from = containerOf(current.start, id);
+    // Into another category, onDragOver has already placed it; within its own category,
+    // the drop decides its place.
+    const containers =
+      containerOf(current.containers, id) === from
+        ? moveBetween(current.containers, id, String(over.id))
+        : current.containers;
+    const to = containerOf(containers, id);
     if (!to || !from) return;
     if (to === from && containers[to].join() === current.start[from].join()) return;
-    // Shown at once; the server's answer (a newer revision) replaces it, or undoes it.
-    setList((latest) => withContainers(latest, containers));
-    run(() => moveProductAction(id, to, containers[to]));
+    // Shown at once until the server answers; if the answer is an error, or never comes,
+    // the confirmed list shows again.
+    const changed = { [from]: containers[from], [to]: containers[to] };
+    run(() => moveProductAction(id, to, containers[to]), { kind: "order", containers: changed });
   }
 
   const nameOf = (id: UniqueIdentifier) => findProduct(String(id))?.product.name ?? "";
@@ -291,7 +301,11 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
           {t("home.add")}
         </Button>
         {productCount > 0 && (
-          <Button size="lg" variant="outline" onClick={() => setDialog({ kind: "clear" })}>
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={() => setDialog({ kind: "clear", revision: list.revision, productCount })}
+          >
             {t("home.clear")}
           </Button>
         )}
@@ -390,7 +404,9 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
                             ? { kind: "quantity", productId: product.id, quantity }
                             : undefined,
                         );
-                        return true;
+                        // 0 isn't shown: the product goes once the server deletes it, or
+                        // stays, showing its quantity, if the delete is refused.
+                        return quantity > 0;
                       }}
                       onEdit={() => setDialog({ kind: "edit", id: product.id })}
                     />
@@ -419,10 +435,22 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
       )}
       {dialog?.kind === "clear" && (
         <ClearListDialog
-          productCount={productCount}
-          revision={list.revision}
+          productCount={dialog.productCount}
+          revision={dialog.revision}
           onClose={() => setDialog(null)}
-          onResult={(result) => startTransition(() => report(result, true))}
+          onResult={(result) =>
+            startTransition(() => {
+              report(result, true);
+              // Refused because the list changed: ask again about the list as it is now.
+              if (!result.ok) {
+                setDialog({
+                  kind: "clear",
+                  revision: result.list.revision,
+                  productCount: result.list.categories.reduce((n, c) => n + c.products.length, 0),
+                });
+              }
+            })
+          }
         />
       )}
     </Stack>

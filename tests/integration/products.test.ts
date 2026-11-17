@@ -349,3 +349,51 @@ describe("getListSnapshot", () => {
     expect(snapshot.revision).toBe(await revision());
   });
 });
+
+describe("concurrency", () => {
+  it("restores into its old place even after the order changed meanwhile", async () => {
+    for (const name of ["א", "ב", "ג"]) await addProduct(draft(name));
+    const result = await deleteProduct((await product("ב")).id);
+    if (!result.ok) throw new Error("delete failed");
+    // Meanwhile "ג" was dragged into "ב"'s old place.
+    const [a, c] = await Promise.all(["א", "ג"].map(product));
+    await moveProduct(c.id, c.categoryId, [c.id, a.id]);
+    expect(await shown()).toEqual({ כללי: ["ג", "א"] });
+
+    await restoreProduct(result.deleted);
+    expect(await shown()).toEqual({ כללי: ["ג", "ב", "א"] });
+  });
+
+  it("adds to General when the chosen category is deleted at the same moment", async () => {
+    const frozen = await categoryId("קפואים");
+    const [deleted, added] = await Promise.all([
+      deleteCategory(frozen, 1, 0),
+      addProduct(draft("גלידה", 1, frozen)),
+    ]);
+    expect(added).toEqual({ kind: "created" });
+    // Either the delete went first (the product went to General), or the add did (and the
+    // delete was refused: a product appeared since the question).
+    if (deleted.ok) expect(await shown()).toEqual({ כללי: ["גלידה"] });
+    else expect(deleted).toEqual({ ok: false, reason: "productsChanged" });
+  });
+
+  it("never deadlocks when every kind of change runs at once", async () => {
+    const dairy = await categoryId("מוצרי חלב");
+    for (let round = 0; round < 8; round += 1) {
+      await prisma.product.deleteMany({});
+      for (const name of ["חלב", "גבינה", "יוגורט"]) await addProduct(draft(name, 2, dairy));
+      const [milk, cheese, yogurt] = await Promise.all(["חלב", "גבינה", "יוגורט"].map(product));
+      const results = await Promise.allSettled([
+        changeQuantity(milk.id, 1),
+        changeQuantity(cheese.id, -1),
+        setChecked(yogurt.id, true),
+        moveProduct(yogurt.id, dairy, [yogurt.id, cheese.id, milk.id]),
+        updateProduct(milk.id, milk.version, draft("חלב 1%", 3, dairy)),
+        clearList(await revision()),
+        addProduct(draft("שמנת", 1, dairy)),
+      ]);
+      const errors = results.filter((result) => result.status === "rejected");
+      expect(errors.map((error) => String((error as PromiseRejectedResult).reason))).toEqual([]);
+    }
+  });
+});

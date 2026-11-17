@@ -129,7 +129,10 @@ export function ProductFormDialog({ product, categories, onClose, onResult }: Pr
   return (
     <Dialog.Root
       open
-      onOpenChange={(details) => !details.open && onClose()}
+      // Not dismissed while a request is pending: its answer belongs to this dialog.
+      onOpenChange={(details) => !details.open && !pending && onClose()}
+      closeOnEscape={!pending}
+      closeOnInteractOutside={!pending}
       initialFocusEl={() => nameRef.current}
       size={{ base: "full", md: "md" }}
       placement="center"
@@ -244,7 +247,7 @@ export function ProductFormDialog({ product, categories, onClose, onResult }: Pr
                 </HStack>
               </Dialog.Footer>
               <Dialog.CloseTrigger asChild>
-                <CloseButton size="lg" aria-label={t("productForm.close")} />
+                <CloseButton size="lg" aria-label={t("productForm.close")} disabled={!!pending} />
               </Dialog.CloseTrigger>
             </form>
           </Dialog.Content>

@@ -37,13 +37,17 @@ test("on a phone, the navigation is a bar at the bottom of the screen @mobile", 
 
   await nav.getByRole("link", { name: "הגדרות" }).click();
   await expect(page).toHaveURL(/\/settings$/);
-  // The last part of the page isn't hidden behind the bar.
-  const signOut = page.getByRole("button", { name: "התנתקות" });
-  await signOut.scrollIntoViewIfNeeded();
+  // The last part of the page isn't hidden behind the bar. Waits for the parts that load
+  // later (the categories, the account), which make the page longer.
+  await expect(page.getByTestId("category-row")).toHaveCount(12);
+  await expect(page.getByRole("button", { name: "התנתקות" })).toBeVisible();
   const privacy = page.getByRole("link", { name: "מדיניות פרטיות" });
-  await privacy.scrollIntoViewIfNeeded();
-  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-  const linkBox = await privacy.boundingBox();
-  const navBox = await nav.boundingBox();
-  expect(linkBox!.y + linkBox!.height).toBeLessThanOrEqual(navBox!.y);
+  await expect
+    .poll(async () => {
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      const linkBox = await privacy.boundingBox();
+      const navBox = await nav.boundingBox();
+      return linkBox!.y + linkBox!.height <= navBox!.y;
+    })
+    .toBe(true);
 });

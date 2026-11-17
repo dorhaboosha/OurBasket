@@ -207,6 +207,18 @@ test.describe("quantities", () => {
     await expect(field).toHaveValue("5");
     expect((await saved("סוללות"))[0].quantity).toBe(5);
   });
+
+  test("a refused 0 shows the quantity again, not 0", async ({ page }) => {
+    await addProduct("כללי", "סוללות");
+    await openList(page);
+    await db.query(`UPDATE product SET version = version + 1 WHERE name = 'סוללות'`);
+    const field = quantity(page, "סוללות");
+    await field.fill("0");
+    await field.press("Enter");
+    await expect(page.getByText("הכמות השתנתה בינתיים במכשיר אחר", { exact: false })).toBeVisible();
+    await expect(field).toHaveValue("1");
+    expect(await saved("סוללות")).toHaveLength(1);
+  });
 });
 
 test.describe("checking off", () => {
@@ -225,7 +237,7 @@ test.describe("checking off", () => {
     );
     await expect.poll(() => namesIn(page, "מוצרי חלב")).toEqual(["גבינה", "יוגורט", "חלב"]);
     await expect(section(page, "מוצרי חלב")).toContainText("1 מתוך 3 סומנו");
-    expect((await saved("חלב"))[0].isChecked).toBe(true);
+    await expect.poll(async () => (await saved("חלב"))[0]?.isChecked).toBe(true);
 
     await page.reload();
     await expect(page.getByRole("checkbox", { name: "חלב" })).toBeChecked();
@@ -398,6 +410,11 @@ test.describe("clearing the list", () => {
     await expect(dialog).toContainText("הרשימה השתנתה מאז השאלה");
     await expect(dialog).toContainText("כל 2 המוצרים שברשימה יימחקו");
     expect((await db.query(`SELECT 1 FROM product`)).rowCount).toBe(2);
+
+    // Asked again about the list as it is now: confirming clears it.
+    await dialog.getByRole("button", { name: "ניקוי הרשימה" }).click();
+    await expect(page.getByTestId("empty-list")).toBeVisible();
+    expect((await db.query(`SELECT 1 FROM product`)).rowCount).toBe(0);
   });
 });
 

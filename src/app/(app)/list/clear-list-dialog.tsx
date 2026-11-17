@@ -42,7 +42,10 @@ export function ClearListDialog({ productCount, revision, onClose, onResult }: P
     <Dialog.Root
       open
       role="alertdialog"
-      onOpenChange={(details) => !details.open && onClose()}
+      // Not dismissed while a request is pending: its answer belongs to this dialog.
+      onOpenChange={(details) => !details.open && !pending && onClose()}
+      closeOnEscape={!pending}
+      closeOnInteractOutside={!pending}
       initialFocusEl={() => cancelRef.current}
       size="sm"
       placement="center"

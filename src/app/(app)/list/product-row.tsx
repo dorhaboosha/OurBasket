@@ -14,7 +14,10 @@ type Props = {
   draggable: boolean;
   onCheck: (isChecked: boolean) => void;
   onStep: (delta: 1 | -1) => void;
-  /** A typed quantity. Returns false if it isn't one (the field then shows the old one). */
+  /**
+   * A typed quantity. Returns whether it now shows on its own (as an optimistic change);
+   * if not (not a number, or 0 while its delete is pending), the field shows the saved one.
+   */
   onTypeQuantity: (text: string) => boolean;
   onEdit: () => void;
 };
@@ -180,8 +183,8 @@ function QuantityControl({
       setText(String(quantity));
       return;
     }
-    // A valid quantity shows at once (optimistic) and comes back as the new prop; an
-    // invalid one, or a failed save, leaves the saved quantity showing.
+    // A valid quantity shows at once (optimistic) and comes back as the new prop; anything
+    // else shows the saved quantity again, so a refused delete never leaves "0" behind.
     if (!onType(text)) setText(String(quantity));
   }
 

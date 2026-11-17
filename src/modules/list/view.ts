@@ -11,9 +11,12 @@ import type { ListCategory, ListSnapshot } from "./snapshot";
  */
 export type OptimisticChange =
   | { kind: "checked"; productId: string; isChecked: boolean }
-  | { kind: "quantity"; productId: string; quantity: number };
+  | { kind: "quantity"; productId: string; quantity: number }
+  /** A drag and drop: the products of the categories it changed, in their new order. */
+  | { kind: "order"; containers: Containers };
 
 export function applyOptimistic(list: ListSnapshot, change: OptimisticChange): ListSnapshot {
+  if (change.kind === "order") return withContainers(list, change.containers);
   return {
     ...list,
     categories: list.categories.map((category) => ({

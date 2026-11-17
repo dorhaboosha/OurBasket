@@ -8,6 +8,10 @@ import type { ProductDraft } from "./validation";
 
 // Products on the active list (spec 8). Both users may change any product. Every change
 // runs in a transaction that also raises the list revision.
+//
+// Lock order, the same in every transaction so two can never wait on each other: the
+// category, then products (several at once: by id), then list_state, always last (it is
+// locked by bumpRevision, or by clearList after its products).
 
 const MAX = appConfig.limits.quantityMax;
 
@@ -82,6 +86,13 @@ export async function restoreProduct(deleted: DeletedProduct): Promise<AddOutcom
       if (merged) return merged;
       const categoryId = await categoryOrGeneral(tx, deleted.categoryId);
       const sameCategory = categoryId === deleted.categoryId;
+      if (sameCategory) {
+        // Makes room at its old place: products there now (moved meanwhile) shift down.
+        await tx.product.updateMany({
+          where: { categoryId, sortOrder: { gte: deleted.sortOrder } },
+          data: { sortOrder: { increment: 1 } },
+        });
+      }
       await tx.product.create({
         data: {
           name: deleted.name,
@@ -109,13 +120,16 @@ export async function updateProduct(
 ): Promise<{ ok: true } | ProductFailure> {
   try {
     return await prisma.$transaction(async (tx) => {
+      // The category before the product (see the lock order above): deleting a category
+      // locks it first too, then its products.
+      const categoryId = draft.categoryId ?? (await generalCategoryId(tx));
+      const categoryExists = await keepCategory(tx, categoryId);
       const current = await lockProduct(tx, id);
       if (!current) return { ok: false as const, reason: "notFound" as const };
       if (current.version !== expectedVersion) {
         return { ok: false as const, reason: "stale" as const };
       }
-      const categoryId = draft.categoryId ?? (await generalCategoryId(tx));
-      if (!(await tx.category.count({ where: { id: categoryId } }))) {
+      if (!categoryExists) {
         return { ok: false as const, reason: "categoryNotFound" as const };
       }
       const moved = categoryId !== current.categoryId;
@@ -230,17 +244,19 @@ export async function moveProduct(
   orderedIds: readonly string[],
 ): Promise<{ ok: true } | ProductFailure> {
   return prisma.$transaction(async (tx) => {
-    const current = await lockProduct(tx, id);
-    if (!current) return { ok: false as const, reason: "notFound" as const };
+    // The destination first, then the moved product and the destination's products, by
+    // id (see the lock order above).
     const [category] = await tx.$queryRaw<{ id: string }[]>`
       SELECT id FROM category WHERE id = ${toCategoryId} FOR UPDATE`;
+    const locked = await tx.$queryRaw<{ id: string; categoryId: string }[]>`
+      SELECT id, "categoryId" FROM product
+      WHERE id = ${id} OR "categoryId" = ${toCategoryId}
+      ORDER BY id FOR UPDATE`;
+    const current = locked.find((product) => product.id === id);
+    if (!current) return { ok: false as const, reason: "notFound" as const };
     if (!category) return { ok: false as const, reason: "categoryNotFound" as const };
 
-    const others = await tx.product.findMany({
-      where: { categoryId: toCategoryId, id: { not: id } },
-      select: { id: true },
-    });
-    const expected = new Set([id, ...others.map((product) => product.id)]);
+    const expected = new Set(locked.map((product) => product.id));
     const sameSet =
       orderedIds.length === expected.size &&
       new Set(orderedIds).size === orderedIds.length &&
@@ -268,7 +284,9 @@ export async function moveProduct(
  */
 export async function clearList(expectedRevision: number): Promise<{ ok: true } | ProductFailure> {
   return prisma.$transaction(async (tx) => {
-    // Locks the revision row: any change to the list waits, or is waited for.
+    // The products, then the revision row (see the lock order above): a change to the list
+    // waits for this, or this waits for it and then sees its new revision.
+    await tx.$queryRaw`SELECT id FROM product ORDER BY id FOR UPDATE`;
     const [state] = await tx.$queryRaw<{ revision: number }[]>`
       SELECT revision FROM list_state WHERE id = 1 FOR UPDATE`;
     if ((state?.revision ?? 0) !== expectedRevision) {
@@ -346,8 +364,19 @@ async function mergeIntoExisting(
 
 /** The category, if it still exists; otherwise the system category, General. */
 async function categoryOrGeneral(tx: Tx, categoryId: string | null): Promise<string> {
-  if (categoryId && (await tx.category.count({ where: { id: categoryId } }))) return categoryId;
+  if (categoryId && (await keepCategory(tx, categoryId))) return categoryId;
   return generalCategoryId(tx);
+}
+
+/**
+ * Whether the category exists, keeping it until the transaction ends (the lock a product's
+ * foreign key needs). A category being deleted right now is waited for, and then counts as
+ * gone, instead of failing the product's insert.
+ */
+async function keepCategory(tx: Tx, categoryId: string): Promise<boolean> {
+  const [row] = await tx.$queryRaw<{ id: string }[]>`
+    SELECT id FROM category WHERE id = ${categoryId} FOR KEY SHARE`;
+  return Boolean(row);
 }
 
 async function generalCategoryId(tx: Tx): Promise<string> {
