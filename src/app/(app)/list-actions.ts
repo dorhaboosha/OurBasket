@@ -3,6 +3,7 @@
 import { getTranslations } from "next-intl/server";
 import { appConfig } from "@/config/app.config";
 import { requireUser } from "@/modules/auth/current-user";
+import { updateList } from "@/modules/history/purchase";
 import { type ListSnapshot, getListSnapshot } from "@/modules/list/snapshot";
 import {
   type AddOutcome,
@@ -188,6 +189,26 @@ export async function clearListAction(expectedRevision: unknown): Promise<ListAc
   if (!result.ok) return failure(result.reason);
   const t = await getTranslations("productMessages");
   return success(t("cleared"));
+}
+
+/**
+ * "Update list" (spec 9.1): buys the products the user saw checked (seenIds) that are
+ * still checked, records them in history and removes them from the list.
+ */
+export async function updateListAction(seenIds: unknown): Promise<ListActionResult> {
+  await requireUser();
+  if (!Array.isArray(seenIds) || seenIds.length > 1000 || !seenIds.every(isId)) {
+    return failure("listChanged");
+  }
+  const outcome = await updateList(seenIds);
+  const t = await getTranslations("productMessages");
+  if (outcome.purchased === 0) return success(t("nothingPurchased"));
+  const message = t("purchased", { count: outcome.purchased });
+  return success(
+    outcome.skipped > 0
+      ? `${message} ${t("purchasedSkipped", { skipped: outcome.skipped })}`
+      : message,
+  );
 }
 
 // ---- helpers ----

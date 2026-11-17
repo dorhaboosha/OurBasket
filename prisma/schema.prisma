@@ -165,6 +165,9 @@ model PurchaseRecordItem {
   categoryName     String
   categoryColor    String
   categoryIcon     String
+  /// Its place in the list when bought (categories in order, then products in order), so
+  /// the record shows the products as they were listed.
+  position         Int            @default(0)
 
   @@index([purchaseRecordId])
   @@map("purchase_record_item")

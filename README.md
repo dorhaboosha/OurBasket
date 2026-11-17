@@ -4,10 +4,11 @@ A shared shopping list for two people (Dor and Maayan), in Hebrew and right-to-l
 One list, edited from any device, synced in real time, with categories, checked items,
 purchase history and export to WhatsApp text or a printable page.
 
-> **Status:** Steps 1–5 are done: the project setup (Next.js, Chakra UI in RTL, Hebrew
+> **Status:** Steps 1–6 are done: the project setup (Next.js, Chakra UI in RTL, Hebrew
 > text, tests, CI), the database (Prisma, tables, rules, seed), sign-in with Google for
 > the two allowed accounts, the navigation with category management in the settings,
-> and the shopping list itself. Next: "update list" and purchase history (step 6). See
+> the shopping list itself, and "update list", which records purchases. Next: the
+> history screen (step 7). See
 > [`OurBasketSpec.md`](OurBasketSpec.md) for the full spec and the decision log (Hebrew).
 
 ## Tech stack
@@ -83,6 +84,10 @@ password.
     or a typed 0) shows "undo", which puts the product back where it was.
   - Drag a product by its handle to reorder it, or into another category.
   - "Clear list" deletes every product after asking. It isn't a purchase: history stays.
+  - "Update list" (on once something is checked off) asks first, then records the checked
+    products in a new history record, as they are (names, quantities, categories), and
+    removes them from the list. Only products still checked are bought: one the other
+    phone unchecked meanwhile stays on the list.
 - **Navigation:** a sidebar on computers and a bar at the bottom of the screen on
   phones, with the list, the history and the settings. The top bar shows the app's
   name and who is signed in.
@@ -181,7 +186,8 @@ src/
   modules/             domain logic: auth/ (allowlist, hooks, current user),
                        categories/ (validation, database actions, seed),
                        products/ (validation, database actions),
-                       list/ (revision, snapshot, how the screen shows it)
+                       list/ (revision, snapshot, how the screen shows it),
+                       history/ (update list: recording purchases)
   proxy.ts             redirects to /login when there is no session cookie
   generated/           Prisma client (generated, not in git)
 messages/he.json       all UI text

@@ -100,6 +100,7 @@ test.describe("the list with products", () => {
     ["the add product form", "הוספת מוצר"],
     ["the edit product form", "עריכת חלב"],
     ["the clear list question", "נקה רשימה"],
+    ["the update list question", "עדכון רשימה"],
   ];
 
   for (const [name, button] of LIST_DIALOGS) {
