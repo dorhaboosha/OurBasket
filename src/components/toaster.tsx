@@ -18,7 +18,12 @@ export function Toaster({ closeLabel }: { closeLabel: string }) {
     <Portal>
       <ChakraToaster toaster={toaster} insetInline={{ mdDown: "4" }}>
         {(toast) => (
-          <Toast.Root width={{ md: "md" }} alignItems="center">
+          <Toast.Root
+            width={{ md: "md" }}
+            alignItems="center"
+            // Chakra's success green (green.600) is 3.3:1 with white text; green.700 is 5:1.
+            css={{ "&[data-type=success]": { bg: "green.700" } }}
+          >
             <Toast.Indicator />
             <Stack gap="1" flex="1" maxWidth="100%">
               {toast.title && <Toast.Title>{toast.title}</Toast.Title>}
