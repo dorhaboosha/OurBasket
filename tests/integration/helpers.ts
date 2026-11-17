@@ -6,7 +6,8 @@ import { prisma } from "@/lib/prisma";
  */
 export async function resetDatabase() {
   await prisma.$executeRawUnsafe(
-    `TRUNCATE "purchase_record_item", "purchase_record", "product", "category", "list_state",
+    // In the app's lock order: category, product, ..., list_state last.
+    `TRUNCATE "category", "product", "purchase_record_item", "purchase_record", "list_state",
       "verification", "account", "session", "user" CASCADE`,
   );
 }

@@ -5,7 +5,25 @@
   },
   "home": {
     "title": "רשימת הקניות",
-    "comingSoon": "הרשימה תופיע כאן בקרוב."
+    "search": "חיפוש מוצר",
+    "clearSearch": "ניקוי החיפוש",
+    "noResults": "אין מוצרים שמתאימים ל\"{query}\".",
+    "add": "הוספת מוצר",
+    "clear": "נקה רשימה",
+    "empty": "הרשימה ריקה.",
+    "emptyHelp": "מה צריך לקנות? הוסיפו את המוצר הראשון.",
+    "productCount": "{count, plural, one {מוצר אחד} other {# מוצרים}}",
+    "checkedCount": "{checked} מתוך {count} סומנו",
+    "expand": "פתיחת {name}",
+    "collapse": "סגירת {name}",
+    "move": "הזזת {name}",
+    "edit": "עריכת {name}",
+    "quantity": "כמות של {name}",
+    "increase": "הוספת אחד ל{name}",
+    "decrease": "הורדת אחד מ{name}",
+    "undo": "בטל",
+    "saving": "שומרים...",
+    "generic": "משהו השתבש. בדקו את החיבור לאינטרנט ונסו שוב."
   },
   "history": {
     "title": "היסטוריית קניות",
@@ -162,5 +180,59 @@
     "purple": "סגול",
     "indigo": "אינדיגו",
     "slate": "אפור"
+  },
+  "productForm": {
+    "createTitle": "מוצר חדש",
+    "editTitle": "עריכת מוצר",
+    "name": "שם המוצר",
+    "quantity": "כמות",
+    "category": "קטגוריה",
+    "noCategory": "בלי קטגוריה ({general})",
+    "create": "הוספה",
+    "save": "שמירה",
+    "saving": "שומרים...",
+    "cancel": "ביטול",
+    "close": "סגירה",
+    "delete": "מחיקת המוצר",
+    "deleting": "מוחקים..."
+  },
+  "clearList": {
+    "title": "לנקות את הרשימה?",
+    "body": "{count, plural, one {המוצר שברשימה יימחק} other {כל # המוצרים שברשימה יימחקו}}, מסומנים ולא מסומנים.",
+    "history": "זו לא קנייה: היסטוריית הקניות לא תשתנה, ולא תיווצר רשומה חדשה.",
+    "confirm": "ניקוי הרשימה",
+    "clearing": "מנקים...",
+    "cancel": "ביטול"
+  },
+  "productMessages": {
+    "added": "{name} נוסף לרשימה.",
+    "restored": "{name} הוחזר לרשימה.",
+    "saved": "השינויים ב{name} נשמרו.",
+    "merged": "{name} כבר ברשימה, ב{category}: הכמות עודכנה ל-{quantity}.",
+    "mergedCapped": "{name} כבר ברשימה, ב{category}: הכמות הוגבלה ל-{quantity}, המקסימום.",
+    "deleted": "{name} נמחק מהרשימה.",
+    "atMax": "הכמות המקסימלית היא {max}.",
+    "cleared": "הרשימה נוקתה."
+  },
+  "productErrors": {
+    "nameRequired": "צריך לתת למוצר שם.",
+    "nameTooLong": "השם ארוך מדי: עד {max} תווים.",
+    "quantityInvalid": "כמות היא מספר שלם מ-1 עד {maxQuantity}.",
+    "quantityTyped": "כמות היא מספר שלם מ-0 עד {max}. 0 מוחק את המוצר.",
+    "checkForm": "יש שדות שצריך לתקן.",
+    "nameTaken": "המוצר כבר קיים ברשימה.",
+    "notFound": "המוצר כבר לא ברשימה: הוא נמחק במכשיר אחר.",
+    "stale": "המוצר השתנה בינתיים במכשיר אחר. הנתונים העדכניים נטענו: בדקו ונסו שוב.",
+    "quantityStale": "הכמות השתנתה בינתיים במכשיר אחר. מוצגת הכמות העדכנית.",
+    "categoryNotFound": "הקטגוריה שנבחרה נמחקה בינתיים. בחרו קטגוריה אחרת.",
+    "orderChanged": "הרשימה השתנתה בינתיים. הסדר העדכני נטען: נסו שוב.",
+    "listChanged": "הרשימה השתנתה מאז השאלה. בדקו אותה ונסו שוב."
+  },
+  "productReorder": {
+    "instructions": "כדי להזיז מוצר עם המקלדת: עמדו על הידית, לחצו רווח, הזיזו עם החיצים למעלה ולמטה (גם לקטגוריה אחרת), ולחצו רווח שוב כדי להניח. Escape מבטל.",
+    "start": "הרמתם את {name}.",
+    "over": "{name} מעל {target}, ב{category}.",
+    "end": "{name} הונח ב{category}.",
+    "cancel": "ההזזה בוטלה. {name} חזר למקומו."
   }
 }

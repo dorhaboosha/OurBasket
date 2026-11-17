@@ -1,5 +1,13 @@
 import type { Page } from "@playwright/test";
-import { accessibilityViolations, expect, seedDefaults, smallTouchTargets, test } from "./fixtures";
+import {
+  accessibilityViolations,
+  addProduct,
+  db,
+  expect,
+  seedDefaults,
+  smallTouchTargets,
+  test,
+} from "./fixtures";
 
 // Every screen and dialog: axe-core (WCAG 2.1 A and AA) on both projects, and 44×44 touch
 // targets on the phone-sized one.
@@ -69,6 +77,63 @@ test.describe("signed in", () => {
     expect(await accessibilityViolations(page)).toEqual([]);
   });
 });
+
+test.describe("the list with products", () => {
+  test.beforeEach(async ({ signInAs }) => {
+    await seedDefaults();
+    await addProduct("מוצרי חלב", "חלב");
+    await addProduct("מוצרי חלב", "גבינה");
+    await addProduct("כללי", "סוללות");
+    await db.query(`UPDATE product SET "isChecked" = true WHERE name = 'גבינה'`);
+    await signInAs("dor");
+  });
+
+  test("passes the accessibility checks, with 44×44 touch targets @mobile", async ({
+    page,
+  }, testInfo) => {
+    await openList(page);
+    expect(await accessibilityViolations(page)).toEqual([]);
+    if (testInfo.project.name === "mobile") expect(await smallTouchTargets(page)).toEqual([]);
+  });
+
+  const LIST_DIALOGS: [string, string][] = [
+    ["the add product form", "הוספת מוצר"],
+    ["the edit product form", "עריכת חלב"],
+    ["the clear list question", "נקה רשימה"],
+  ];
+
+  for (const [name, button] of LIST_DIALOGS) {
+    test(`${name} passes the accessibility checks, with 44×44 touch targets @mobile`, async ({
+      page,
+    }, testInfo) => {
+      await openList(page);
+      await expect(async () => {
+        await page.getByRole("button", { name: button }).first().click({ timeout: 1000 });
+        await expect(page.getByRole("dialog").or(page.getByRole("alertdialog"))).toBeVisible({
+          timeout: 1000,
+        });
+      }).toPass();
+      expect(await accessibilityViolations(page)).toEqual([]);
+      if (testInfo.project.name === "mobile") expect(await smallTouchTargets(page)).toEqual([]);
+    });
+  }
+
+  test("the undo message passes the accessibility checks, with 44×44 touch targets @mobile", async ({
+    page,
+  }, testInfo) => {
+    await openList(page);
+    await page.getByRole("button", { name: "הורדת אחד מסוללות" }).click();
+    await expect(page.getByRole("button", { name: "בטל" })).toBeVisible();
+    expect(await accessibilityViolations(page)).toEqual([]);
+    if (testInfo.project.name === "mobile") expect(await smallTouchTargets(page)).toEqual([]);
+  });
+});
+
+async function openList(page: Page) {
+  await page.goto("/");
+  await expect(page.getByTestId("product-row").first()).toBeVisible();
+  await page.waitForLoadState("networkidle");
+}
 
 async function openSettingsDialog(page: Page, button: string) {
   await page.goto("/settings");

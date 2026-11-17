@@ -18,12 +18,25 @@ export const db = new pg.Pool({
   allowExitOnIdle: true,
 });
 
-/** Empties every table, so each test starts clean. TRUNCATE skips the category trigger. */
+/**
+ * Empties every table, so each test starts clean. TRUNCATE skips the category trigger.
+ * The tables are locked in the app's order (category, product, ..., list_state last), so
+ * a request the last test left running is waited for, not deadlocked with; a deadlock that
+ * still happens is retried.
+ */
 export async function resetDatabase() {
-  await db.query(
-    `TRUNCATE "purchase_record_item", "purchase_record", "product", "category", "list_state",
-      "verification", "account", "session", "user" CASCADE`,
-  );
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await db.query(
+        `TRUNCATE "category", "product", "purchase_record_item", "purchase_record", "list_state",
+          "verification", "account", "session", "user" CASCADE`,
+      );
+      return;
+    } catch (error) {
+      const deadlock = (error as { code?: string }).code === "40P01";
+      if (!deadlock || attempt === 3) throw error;
+    }
+  }
 }
 
 /** What the database seed creates: the list_state row and the 12 default categories. */
@@ -46,11 +59,13 @@ export async function seedDefaults() {
   }
 }
 
-/** Adds a product to the category with this name, as the list screen will (step 5). */
+/** Adds a product at the end of the category with this name, as the app does. */
 export async function addProduct(categoryName: string, name: string) {
   await db.query(
     `INSERT INTO product (id, "categoryId", name, "normalizedName", quantity, "sortOrder", "updatedAt")
-     SELECT $1, id, $2, $3, 1, 0, now() FROM category WHERE name = $4`,
+     SELECT $1, c.id, $2, $3, 1,
+       (SELECT coalesce(max("sortOrder") + 1, 0) FROM product WHERE "categoryId" = c.id), now()
+     FROM category c WHERE c.name = $4`,
     [randomUUID(), name, name.toLowerCase(), categoryName],
   );
 }
