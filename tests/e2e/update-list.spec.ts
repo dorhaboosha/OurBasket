@@ -81,7 +81,7 @@ test("a product unchecked on the other phone meanwhile stays on the list", async
   await page.getByRole("alertdialog").getByRole("button", { name: "עדכון רשימה" }).click();
   await expect(
     page.getByText(
-      "מוצר אחד נרשם בהיסטוריית הקניות והוסר מהרשימה. מוצר אחד כבר לא היה מסומן, ולכן נשאר ברשימה.",
+      "מוצר אחד נרשם בהיסטוריית הקניות והוסר מהרשימה. מוצר אחד לא נרשם, כי כבר לא היה מסומן או כבר לא היה ברשימה.",
     ),
   ).toBeVisible();
   await expect(page.getByRole("checkbox", { name: "גבינה" })).not.toBeChecked();
