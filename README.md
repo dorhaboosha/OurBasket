@@ -126,7 +126,9 @@ Both phones stay current (spec 12):
 - Only a signed-in, allowed user may listen: Pusher asks
   [`/api/pusher/auth`](src/app/api/pusher/auth/route.ts), which checks the session.
 - Events aren't relied on: the app also reloads when it becomes visible again, when the
-  internet comes back, and when Pusher reconnects (reloads close together become one).
+  internet comes back, and when the Pusher channel is joined (at first and after every
+  reconnect). Requests at the same moment become one reload; one soon after a reload
+  waits a second, then reloads again.
   An open form keeps what was typed.
 - Without an internet connection, a notice says the app needs one.
 

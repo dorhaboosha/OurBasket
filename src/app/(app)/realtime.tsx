@@ -64,41 +64,37 @@ export function Realtime({ revision, pusherKey, pusherCluster, offlineMessage, c
   }, [revision]);
 
   /**
-   * Reloads the page's data. Requests close together become one: a coming-back reload
-   * soon after another is skipped; a change event soon after one waits, then reloads, so
-   * the newest change is never missed.
+   * Reloads the page's data, soon. Requests close together become one: requests at the
+   * same moment share one reload, and a request soon after a reload waits for the gap to
+   * end, then reloads once more, so nothing that happened meanwhile is missed.
    */
-  const reload = useCallback(
-    (kind: "returned" | "changed") => {
-      const wait = lastReload.current + MIN_GAP_MS - Date.now();
-      if (wait > 0) {
-        if (kind === "changed" && !pending.current) {
-          pending.current = setTimeout(() => {
-            pending.current = null;
-            lastReload.current = Date.now();
-            startTransition(() => router.refresh());
-          }, wait);
-        }
-        return;
-      }
+  const reload = useCallback(() => {
+    if (pending.current) return; // One is coming, and will load the newest.
+    const wait = Math.max(0, lastReload.current + MIN_GAP_MS - Date.now());
+    pending.current = setTimeout(() => {
+      pending.current = null;
       lastReload.current = Date.now();
       startTransition(() => router.refresh());
+    }, wait);
+  }, [router]);
+
+  useEffect(
+    () => () => {
+      if (pending.current) clearTimeout(pending.current);
     },
-    [router],
+    [],
   );
 
   // Coming back: the app was in the background, or offline, and may have missed events.
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState === "visible") reload("returned");
+      if (document.visibilityState === "visible") reload();
     };
-    const onOnline = () => reload("returned");
     document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("online", onOnline);
+    window.addEventListener("online", reload);
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("online", onOnline);
-      if (pending.current) clearTimeout(pending.current);
+      window.removeEventListener("online", reload);
     };
   }, [reload]);
 
@@ -115,15 +111,11 @@ export function Realtime({ revision, pusherKey, pusherCluster, offlineMessage, c
       // Ours, or already seen: the screen has it (spec 12.2).
       if (eventRevision === null || eventRevision <= known.current) return;
       known.current = eventRevision;
-      reload("changed");
+      reload();
     });
-    let wasConnected = false;
-    pusher.connection.bind("state_change", ({ current }: { previous: string; current: string }) => {
-      if (current !== "connected") return;
-      // Reconnected after a drop: events may have been missed (spec 12.3).
-      if (wasConnected) reload("returned");
-      wasConnected = true;
-    });
+    // Listening from now on, first and after every reconnect. Changes made before it (since
+    // the page loaded, or while disconnected) sent no event here: load them (spec 12.3).
+    channel.bind("pusher:subscription_succeeded", reload);
     return () => pusher.disconnect();
   }, [pusherKey, pusherCluster, reload]);
 

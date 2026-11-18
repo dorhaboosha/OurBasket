@@ -5,7 +5,8 @@ import { seedDatabase } from "@/modules/categories/seed";
 import { REALTIME_CHANNEL, revisionOf } from "@/modules/realtime/channel";
 import { resetDatabase } from "./helpers";
 
-// Pusher is never called for real: trigger is recorded, and after() runs at once.
+// Pusher is never called for real: trigger is recorded. after() keeps its work, which a
+// test runs when the response would be done.
 const triggered: unknown[][] = [];
 vi.mock("pusher", async (importOriginal) => {
   const Real = ((await importOriginal()) as { default: typeof import("pusher") }).default;
@@ -17,10 +18,15 @@ vi.mock("pusher", async (importOriginal) => {
   }
   return { default: FakePusher };
 });
-const afterCallbacks: Promise<unknown>[] = [];
+const afterCallbacks: (() => Promise<unknown>)[] = [];
 vi.mock("next/server", () => ({
-  after: (callback: () => Promise<unknown>) => afterCallbacks.push(callback()),
+  after: (callback: () => Promise<unknown>) => afterCallbacks.push(callback),
 }));
+
+/** The response is done: runs the work after() kept. */
+async function finishResponse() {
+  await Promise.all(afterCallbacks.map((callback) => callback()));
+}
 
 const user = { id: "u1", configKey: "dor", displayName: "דור" };
 const SOCKET = "1234.5678";
@@ -93,7 +99,8 @@ describe("notifyListChanged", () => {
     const { notifyListChanged } = await realtime();
 
     notifyListChanged();
-    await Promise.all(afterCallbacks);
+    expect(triggered).toEqual([]); // Not yet: the response comes first.
+    await finishResponse();
     expect(triggered).toEqual([[REALTIME_CHANNEL, "list-changed", { revision: 41 }]]);
   });
 
@@ -101,8 +108,8 @@ describe("notifyListChanged", () => {
     setPusherEnv({ PUSHER_KEY: "key", PUSHER_SECRET: "secret" });
     const { notifyListChanged } = await realtime();
     notifyListChanged();
-    await Promise.all(afterCallbacks);
     expect(afterCallbacks).toHaveLength(0);
+    await finishResponse();
     expect(triggered).toEqual([]);
   });
 });

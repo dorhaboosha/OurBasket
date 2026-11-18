@@ -66,6 +66,19 @@ test.describe("coming back to the app", () => {
     expect(reloads()).toBe(1);
   });
 
+  test("still catches up when coming back again soon after a reload", async ({ page }) => {
+    await openList(page);
+    const reloaded = page.waitForResponse((response) => {
+      const headers = response.request().headers();
+      return headers["rsc"] === "1" && !headers["next-router-prefetch"];
+    });
+    await returnToApp(page);
+    await reloaded;
+    await addProduct("מוצרי חלב", "חלב"); // on the other phone, right after that reload
+    await page.evaluate(() => window.dispatchEvent(new Event("online")));
+    await expect(page.getByRole("checkbox", { name: "חלב" })).toBeVisible();
+  });
+
   test("keeps an open form and what was typed in it", async ({ page }) => {
     await openList(page);
     await page.getByRole("button", { name: "הוספת מוצר" }).first().click();
