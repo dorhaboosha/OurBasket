@@ -201,7 +201,6 @@
     "name": "שם המוצר",
     "quantity": "כמות",
     "category": "קטגוריה",
-    "noCategory": "בלי קטגוריה ({general})",
     "create": "הוספה",
     "save": "שמירה",
     "saving": "שומרים...",

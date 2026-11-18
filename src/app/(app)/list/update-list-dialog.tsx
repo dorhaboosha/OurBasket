@@ -52,7 +52,8 @@ export function UpdateListDialog({ checkedIds, onClose, onResult }: Props) {
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content>
+          {/* A margin on phones, so it reads as a question over the page. */}
+          <Dialog.Content mx="4">
             <Dialog.Header>
               <Dialog.Title>{t("updateList.title")}</Dialog.Title>
             </Dialog.Header>

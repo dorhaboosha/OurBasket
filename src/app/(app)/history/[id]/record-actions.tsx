@@ -31,7 +31,8 @@ export function RecordActions({ id, date, productCount }: Props) {
         type: result.ok ? "success" : "error",
         title: result.message,
         closable: true,
-        duration: 6_000,
+        // Long enough to tap its button.
+        duration: result.ok ? 10_000 : 6_000,
         action: result.ok
           ? { label: t("history.toList"), onClick: () => router.push("/") }
           : undefined,
@@ -79,9 +80,10 @@ export function RecordActions({ id, date, productCount }: Props) {
           productCount={productCount}
           onClose={() => setConfirming(false)}
           onDeleted={(message) => {
-            toaster.dismiss();
-            toaster.create({ type: "success", title: message, closable: true });
             router.push("/history");
+            // Shown on the history page it goes to (the toasts live in the layout).
+            toaster.dismiss();
+            toaster.create({ type: "success", title: message, closable: true, duration: 6_000 });
           }}
         />
       )}
@@ -134,7 +136,8 @@ function DeleteRecordDialog({
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content>
+          {/* A margin on phones, so it reads as a question over the page. */}
+          <Dialog.Content mx="4">
             <Dialog.Header>
               <Dialog.Title>{t("deleteRecord.title")}</Dialog.Title>
             </Dialog.Header>

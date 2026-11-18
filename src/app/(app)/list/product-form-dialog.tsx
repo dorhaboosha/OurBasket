@@ -44,7 +44,8 @@ export function ProductFormDialog({ product, categories, onClose, onResult }: Pr
   const initial = {
     name: product?.name ?? "",
     quantity: String(product?.quantity ?? 1),
-    categoryId: product?.categoryId ?? "",
+    // A new product starts in General (spec 8.1: no choice means General).
+    categoryId: product?.categoryId ?? general?.id ?? "",
   };
   const [name, setName] = useState(initial.name);
   const [quantity, setQuantity] = useState(initial.quantity);
@@ -196,11 +197,6 @@ export function ProductFormDialog({ product, categories, onClose, onResult }: Pr
                       value={categoryId}
                       onChange={(event) => setCategoryId(event.target.value)}
                     >
-                      {!product && (
-                        <option value="">
-                          {t("productForm.noCategory", { general: general?.name ?? "" })}
-                        </option>
-                      )}
                       {categories.map((category) => (
                         <option key={category.id} value={category.id}>
                           {category.icon} {category.name}

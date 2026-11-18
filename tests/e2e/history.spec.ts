@@ -158,3 +158,40 @@ test("older purchases load on request", async ({ page }) => {
   await expect(cards(page).last()).toContainText("1 באוקטובר 2026");
   await expect(page.getByRole("button", { name: "קניות קודמות" })).toHaveCount(0);
 });
+
+test("a history page already seen shows a new purchase when visited again", async ({ page }) => {
+  // The page was shown before the purchase: the browser keeps it (Next.js's router cache).
+  await page.goto("/history");
+  await expect(page.getByTestId("empty-history")).toBeVisible();
+  await page.waitForLoadState("networkidle");
+
+  await addProduct("מוצרי חלב", "חלב");
+  await db.query(`UPDATE product SET "isChecked" = true`);
+  await page.getByRole("navigation").getByRole("link", { name: "רשימה" }).click();
+  await expect(page.getByRole("checkbox", { name: "חלב" })).toBeChecked();
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "עדכון רשימה" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "עדכון רשימה" }).click();
+  await expect(page.getByText("נרשם בהיסטוריית הקניות", { exact: false })).toBeVisible();
+
+  await page.getByRole("navigation").getByRole("link", { name: "היסטוריה" }).click();
+  await expect(cards(page)).toHaveCount(1);
+  await expect(page.getByTestId("empty-history")).toHaveCount(0);
+});
+
+test("the list seen before adding from history shows the added products", async ({ page }) => {
+  const id = await addPurchase(NOV_18, [["חלב", 2, "מוצרי חלב"]]);
+  await page.goto("/");
+  await expect(page.getByTestId("empty-list")).toBeVisible();
+  await page.waitForLoadState("networkidle");
+
+  await page.getByRole("navigation").getByRole("link", { name: "היסטוריה" }).click();
+  await cards(page).first().click();
+  await expect(page).toHaveURL(new RegExp(`/history/${id}`));
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "הוספה לרשימה" }).click();
+  await expect(page.getByText("מוצר אחד נוסף לרשימה.")).toBeVisible();
+
+  await page.getByRole("navigation").getByRole("link", { name: "רשימה" }).click();
+  await expect(page.getByRole("textbox", { name: "כמות של חלב" })).toHaveValue("2");
+});

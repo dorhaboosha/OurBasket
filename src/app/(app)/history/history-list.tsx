@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, Button, HStack, Link, Stack, Text } from "@chakra-ui/react";
-import { ChevronLeft, Plus } from "lucide-react";
+import { ChevronLeft, ListChecks } from "lucide-react";
 import NextLink from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
@@ -15,6 +15,14 @@ export function HistoryList({ initial }: { initial: HistoryPage }) {
   const t = useTranslations("history");
   const [cards, setCards] = useState(initial.cards);
   const [nextCursor, setNextCursor] = useState(initial.nextCursor);
+  // A page left for another stays alive (Next.js keeps visited pages, with their state):
+  // when the server sends the history again (a purchase was made meanwhile), show it.
+  const [seen, setSeen] = useState(initial);
+  if (initial !== seen) {
+    setSeen(initial);
+    setCards(initial.cards);
+    setNextCursor(initial.nextCursor);
+  }
   const [loading, startLoading] = useTransition();
 
   function loadMore() {
@@ -46,7 +54,7 @@ export function HistoryList({ initial }: { initial: HistoryPage }) {
         <Text color="fg.muted">{t("emptyHelp")}</Text>
         <Button asChild size="lg" bg="brand" color="white" _hover={{ bg: "brandHover" }}>
           <NextLink href="/">
-            <Plus aria-hidden />
+            <ListChecks aria-hidden />
             {t("toList")}
           </NextLink>
         </Button>
