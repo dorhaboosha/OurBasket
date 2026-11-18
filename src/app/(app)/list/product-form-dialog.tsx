@@ -27,6 +27,8 @@ import {
 type Props = {
   /** The product being edited; none for a new one. Always the latest loaded version. */
   product?: ListProduct;
+  /** The product was deleted (or bought) on the other phone while being edited. */
+  gone?: boolean;
   categories: ListCategory[];
   onClose: () => void;
   /** Every answer from the server: the list screen shows its list and message. */
@@ -35,9 +37,10 @@ type Props = {
 
 /**
  * Adds a product (spec 8.1) or edits one (8.3): name, quantity and category. With no
- * category, a new product goes to General. Editing also offers delete.
+ * category, a new product goes to General. Editing also offers delete. If the product is
+ * deleted meanwhile, the form stays open with what was typed, and says so.
  */
-export function ProductFormDialog({ product, categories, onClose, onResult }: Props) {
+export function ProductFormDialog({ product, gone = false, categories, onClose, onResult }: Props) {
   const t = useTranslations();
   const nameRef = useRef<HTMLInputElement>(null);
   const general = categories.find((category) => category.isSystem);
@@ -78,10 +81,8 @@ export function ProductFormDialog({ product, categories, onClose, onResult }: Pr
         onClose();
         return;
       }
-      if (result.reason === "notFound") {
-        onClose();
-        return;
-      }
+      // Deleted meanwhile: the list no longer has it, and the form says so (`gone`).
+      if (result.reason === "notFound") return;
       setFieldErrors(
         result.fieldErrors ?? (result.reason === "nameTaken" ? { name: result.message } : {}),
       );
@@ -150,10 +151,10 @@ export function ProductFormDialog({ product, categories, onClose, onResult }: Pr
                 </Dialog.Title>
               </Dialog.Header>
               <Dialog.Body display="flex" flexDirection="column" gap="5">
-                {message && (
-                  <Alert.Root status="warning">
+                {(gone || message) && (
+                  <Alert.Root status="warning" data-testid="product-form-message">
                     <Alert.Indicator />
-                    <Alert.Title>{message}</Alert.Title>
+                    <Alert.Title>{gone ? t("productErrors.notFound") : message}</Alert.Title>
                   </Alert.Root>
                 )}
 
@@ -216,7 +217,7 @@ export function ProductFormDialog({ product, categories, onClose, onResult }: Pr
                     onClick={() => run("delete", () => deleteProductAction(product.id))}
                     loading={pending === "delete"}
                     loadingText={t("productForm.deleting")}
-                    disabled={pending === "save"}
+                    disabled={gone || pending === "save"}
                   >
                     <Trash2 aria-hidden />
                     {t("productForm.delete")}
@@ -233,7 +234,7 @@ export function ProductFormDialog({ product, categories, onClose, onResult }: Pr
                     size="lg"
                     loading={pending === "save"}
                     loadingText={t("productForm.saving")}
-                    disabled={pending === "delete"}
+                    disabled={gone || pending === "delete"}
                     bg="brand"
                     color="white"
                     _hover={{ bg: "brandHover" }}

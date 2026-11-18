@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Page, Request } from "@playwright/test";
 import { addProduct, addPurchase, expect, seedDefaults, test } from "./fixtures";
 
 // Real-time events need the real Pusher, which tests never use (see E2E_ENV). These tests
@@ -14,15 +14,17 @@ async function returnToApp(page: Page) {
   await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
 }
 
-/**
- * Counts the page's data reloads from now on: Next.js data requests that aren't link
- * prefetches (those are marked with next-router-prefetch).
- */
+/** A page data reload: a Next.js data request that isn't a link prefetch. */
+function isReload(request: Request) {
+  const headers = request.headers();
+  return headers["rsc"] === "1" && !headers["next-router-prefetch"];
+}
+
+/** Counts the page's data reloads from now on. */
 function countReloads(page: Page) {
   let count = 0;
   page.on("request", (request) => {
-    const headers = request.headers();
-    if (headers["rsc"] === "1" && !headers["next-router-prefetch"]) count += 1;
+    if (isReload(request)) count += 1;
   });
   return () => count;
 }
@@ -68,15 +70,23 @@ test.describe("coming back to the app", () => {
 
   test("still catches up when coming back again soon after a reload", async ({ page }) => {
     await openList(page);
-    const reloaded = page.waitForResponse((response) => {
-      const headers = response.request().headers();
-      return headers["rsc"] === "1" && !headers["next-router-prefetch"];
+    const reloads: number[] = [];
+    page.on("request", (request) => {
+      if (isReload(request)) reloads.push(Date.now());
     });
+    const first = page.waitForResponse((response) => isReload(response.request()));
     await returnToApp(page);
-    await reloaded;
+    // That reload is done, data included (it streams): the change below isn't in it.
+    await (await first).finished();
     await addProduct("מוצרי חלב", "חלב"); // on the other phone, right after that reload
     await page.evaluate(() => window.dispatchEvent(new Event("online")));
+    // Back again within the gap after the first reload...
+    expect(Date.now() - reloads[0]).toBeLessThan(1_000);
+
+    // ...so it waited for the gap to end, then reloaded once more.
     await expect(page.getByRole("checkbox", { name: "חלב" })).toBeVisible();
+    expect(reloads).toHaveLength(2);
+    expect(reloads[1] - reloads[0]).toBeGreaterThanOrEqual(900);
   });
 
   test("keeps an open form and what was typed in it", async ({ page }) => {

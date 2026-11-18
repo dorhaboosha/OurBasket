@@ -314,6 +314,28 @@ test.describe("editing", () => {
     ]);
   });
 
+  test("a product deleted on another device keeps the form and what was typed", async ({
+    page,
+  }) => {
+    await addProduct("מוצרי חלב", "חלב");
+    await openList(page);
+    const dialog = await openEdit(page, "חלב");
+    await dialog.getByLabel("שם המוצר").fill("חלב 3%");
+    // Meanwhile, on another device: the product is deleted.
+    await db.query(`DELETE FROM product WHERE name = 'חלב'`);
+
+    await dialog.getByRole("button", { name: "שמירה" }).click();
+    await expect(dialog.getByTestId("product-form-message")).toHaveText(
+      "המוצר כבר לא ברשימה: הוא נמחק במכשיר אחר.",
+    );
+    await expect(dialog.getByLabel("שם המוצר")).toHaveValue("חלב 3%");
+    await expect(dialog.getByRole("button", { name: "שמירה" })).toBeDisabled();
+    await expect(dialog.getByRole("button", { name: "מחיקת המוצר" })).toBeDisabled();
+    await dialog.getByRole("button", { name: "ביטול" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByTestId("empty-list")).toBeVisible();
+  });
+
   test("deletes from the edit form, with undo", async ({ page }) => {
     await addProduct("כללי", "סוללות");
     await openList(page);
