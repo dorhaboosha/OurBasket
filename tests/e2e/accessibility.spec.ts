@@ -3,6 +3,7 @@ import { contrastRatio } from "../../src/config/contrast";
 import {
   accessibilityViolations,
   addProduct,
+  addPurchase,
   db,
   expect,
   seedDefaults,
@@ -149,6 +150,47 @@ test.describe("the list with products", () => {
     await expect(message).toBeVisible();
     expect(await accessibilityViolations(page)).toEqual([]);
     expect(await toastContrast(message)).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+test.describe("the history with purchases", () => {
+  let purchaseId = "";
+
+  test.beforeEach(async ({ signInAs }) => {
+    await seedDefaults();
+    purchaseId = await addPurchase(new Date("2026-11-18T12:30:00Z"), [
+      ["חלב", 2, "מוצרי חלב"],
+      ["מים", 6, "משקאות"],
+    ]);
+    await signInAs("dor");
+  });
+
+  for (const [name, path] of [
+    ["the purchase cards", () => "/history"],
+    ["a purchase's details", () => `/history/${purchaseId}`],
+  ] as const) {
+    test(`${name} pass the accessibility checks, with 44×44 touch targets @mobile`, async ({
+      page,
+    }, testInfo) => {
+      await page.goto(path());
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await page.waitForLoadState("networkidle");
+      expect(await accessibilityViolations(page)).toEqual([]);
+      if (testInfo.project.name === "mobile") expect(await smallTouchTargets(page)).toEqual([]);
+    });
+  }
+
+  test("the delete purchase question passes the accessibility checks @mobile", async ({
+    page,
+  }, testInfo) => {
+    await page.goto(`/history/${purchaseId}`);
+    await page.waitForLoadState("networkidle");
+    await expect(async () => {
+      await page.getByRole("button", { name: "מחיקת הרשומה" }).click({ timeout: 1000 });
+      await expect(page.getByRole("alertdialog")).toBeVisible({ timeout: 1000 });
+    }).toPass();
+    expect(await accessibilityViolations(page)).toEqual([]);
+    if (testInfo.project.name === "mobile") expect(await smallTouchTargets(page)).toEqual([]);
   });
 });
 

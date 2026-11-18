@@ -4,11 +4,11 @@ A shared shopping list for two people (Dor and Maayan), in Hebrew and right-to-l
 One list, edited from any device, synced in real time, with categories, checked items,
 purchase history and export to WhatsApp text or a printable page.
 
-> **Status:** Steps 1–6 are done: the project setup (Next.js, Chakra UI in RTL, Hebrew
+> **Status:** Steps 1–7 are done: the project setup (Next.js, Chakra UI in RTL, Hebrew
 > text, tests, CI), the database (Prisma, tables, rules, seed), sign-in with Google for
 > the two allowed accounts, the navigation with category management in the settings,
-> the shopping list itself, and "update list", which records purchases. Next: the
-> history screen (step 7). See
+> the shopping list itself, "update list", and the purchase history. Next: real-time
+> sync between the two phones (step 8). See
 > [`OurBasketSpec.md`](OurBasketSpec.md) for the full spec and the decision log (Hebrew).
 
 ## Tech stack
@@ -91,6 +91,15 @@ password.
 - **Navigation:** a sidebar on computers and a bar at the bottom of the screen on
   phones, with the list, the history and the settings. The top bar shows the app's
   name and who is signed in.
+- **History:** one card per purchase, newest first (20 at a time, then "older
+  purchases"), with its date and time in Israel time and how many products and
+  categories it had.
+  - A purchase's page shows its products by category, as they were when bought (even if
+    the category was renamed or deleted since).
+  - "Add to list" puts its products back on the list: a listed product gets the
+    quantity added (up to 999) and keeps its category; another goes to its category
+    from then (by id), or to General if that was deleted.
+  - Deleting a purchase asks first. It doesn't put anything back on the list.
 - **Settings:** the categories (add, edit, delete, reorder), the account (sign out) and
   about the app.
   - A category has a name (up to 60 characters, unique after normalizing), one of the 12
@@ -187,7 +196,7 @@ src/
                        categories/ (validation, database actions, seed),
                        products/ (validation, database actions),
                        list/ (revision, snapshot, how the screen shows it),
-                       history/ (update list: recording purchases)
+                       history/ (update list, reading, adding back, deleting)
   proxy.ts             redirects to /login when there is no session cookie
   generated/           Prisma client (generated, not in git)
 messages/he.json       all UI text
