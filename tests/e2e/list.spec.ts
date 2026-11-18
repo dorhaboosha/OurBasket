@@ -67,7 +67,8 @@ test.describe("adding", () => {
     const dialog = await openAddDialog(page);
     await expect(dialog.getByLabel("שם המוצר")).toBeFocused();
     await expect(dialog.getByLabel("כמות")).toHaveValue("1");
-    await expect(dialog.getByLabel("קטגוריה")).toHaveValue("");
+    await expect(dialog.getByLabel("קטגוריה").locator("option:checked")).toHaveText("🛒 כללי");
+    await expect(dialog.getByLabel("קטגוריה").getByRole("option")).toHaveCount(12);
     await dialog.getByLabel("שם המוצר").fill("סוללות");
     await dialog.getByRole("button", { name: "הוספה" }).click();
 

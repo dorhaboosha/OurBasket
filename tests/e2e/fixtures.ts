@@ -70,6 +70,27 @@ export async function addProduct(categoryName: string, name: string) {
   );
 }
 
+/**
+ * Records a purchase, as "update list" would: items are [product, quantity, category],
+ * copied from the category as it is now. Returns the record's id.
+ */
+export async function addPurchase(purchasedAt: Date, items: [string, number, string][]) {
+  const id = randomUUID();
+  await db.query(`INSERT INTO purchase_record (id, "purchasedAt") VALUES ($1, $2)`, [
+    id,
+    purchasedAt,
+  ]);
+  for (const [position, [name, quantity, category]] of items.entries()) {
+    await db.query(
+      `INSERT INTO purchase_record_item (id, "purchaseRecordId", "productName", "normalizedName",
+         quantity, "categoryId", "categoryName", "categoryColor", "categoryIcon", position)
+       SELECT $1, $2, $3, $4, $5, c.id, c.name, c.color, c.icon, $6 FROM category c WHERE c.name = $7`,
+      [randomUUID(), id, name, name.toLowerCase(), quantity, position, category],
+    );
+  }
+  return id;
+}
+
 /** The category names in their saved order. */
 export async function savedCategoryNames() {
   const { rows } = await db.query<{ name: string }>(

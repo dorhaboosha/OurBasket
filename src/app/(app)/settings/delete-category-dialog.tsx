@@ -59,7 +59,8 @@ export function DeleteCategoryDialog({ category, onClose, onDeleted, onGone }: P
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content>
+          {/* A margin on phones, so it reads as a question over the page. */}
+          <Dialog.Content mx="4">
             <Dialog.Header>
               <Dialog.Title>{t("deleteCategory.title")}</Dialog.Title>
             </Dialog.Header>
