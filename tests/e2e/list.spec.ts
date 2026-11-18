@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { addProduct, db, expect, seedDefaults, test } from "./fixtures";
+import { addProduct, db, expect, openDialog, seedDefaults, test } from "./fixtures";
 
 test.beforeEach(async ({ signInAs }) => {
   await seedDefaults();
@@ -40,10 +40,7 @@ async function openList(page: Page) {
 }
 
 async function openAddDialog(page: Page) {
-  await expect(async () => {
-    await page.getByRole("button", { name: "הוספת מוצר" }).first().click({ timeout: 1000 });
-    await expect(page.getByRole("dialog", { name: "מוצר חדש" })).toBeVisible({ timeout: 1000 });
-  }).toPass();
+  await openDialog(page, page.getByRole("button", { name: "הוספת מוצר" }).first());
   return page.getByRole("dialog", { name: "מוצר חדש" });
 }
 
@@ -257,12 +254,7 @@ test.describe("checking off", () => {
 
 test.describe("editing", () => {
   async function openEdit(page: Page, name: string) {
-    await expect(async () => {
-      await page.getByRole("button", { name: `עריכת ${name}` }).click({ timeout: 1000 });
-      await expect(page.getByRole("dialog", { name: "עריכת מוצר" })).toBeVisible({
-        timeout: 1000,
-      });
-    }).toPass();
+    await openDialog(page, page.getByRole("button", { name: `עריכת ${name}` }));
     return page.getByRole("dialog", { name: "עריכת מוצר" });
   }
 

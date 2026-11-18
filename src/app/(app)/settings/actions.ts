@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { appConfig } from "@/config/app.config";
 import { requireUser } from "@/modules/auth/current-user";
+import { notifyListChanged } from "@/modules/realtime/server";
 import {
   type CategoryFailure,
   createCategory,
@@ -75,6 +76,8 @@ export async function reorderCategoriesAction(orderedIds: unknown): Promise<Cate
  */
 async function done(result: { ok: true } | CategoryFailure) {
   refresh();
+  // The list shows categories too: the other phone reloads (spec 12.2).
+  if (result.ok) notifyListChanged();
   return result.ok ? { ok: true as const } : failure(result.reason);
 }
 

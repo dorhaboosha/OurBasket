@@ -6,6 +6,7 @@ import {
   addPurchase,
   db,
   expect,
+  openDialog,
   seedDefaults,
   smallTouchTargets,
   test,
@@ -110,12 +111,7 @@ test.describe("the list with products", () => {
       page,
     }, testInfo) => {
       await openList(page);
-      await expect(async () => {
-        await page.getByRole("button", { name: button }).first().click({ timeout: 1000 });
-        await expect(page.getByRole("dialog").or(page.getByRole("alertdialog"))).toBeVisible({
-          timeout: 1000,
-        });
-      }).toPass();
+      await openDialog(page, page.getByRole("button", { name: button }).first());
       expect(await accessibilityViolations(page)).toEqual([]);
       if (testInfo.project.name === "mobile") expect(await smallTouchTargets(page)).toEqual([]);
     });
@@ -185,10 +181,7 @@ test.describe("the history with purchases", () => {
   }, testInfo) => {
     await page.goto(`/history/${purchaseId}`);
     await page.waitForLoadState("networkidle");
-    await expect(async () => {
-      await page.getByRole("button", { name: "מחיקת הרשומה" }).click({ timeout: 1000 });
-      await expect(page.getByRole("alertdialog")).toBeVisible({ timeout: 1000 });
-    }).toPass();
+    await openDialog(page, page.getByRole("button", { name: "מחיקת הרשומה" }));
     expect(await accessibilityViolations(page)).toEqual([]);
     if (testInfo.project.name === "mobile") expect(await smallTouchTargets(page)).toEqual([]);
   });
@@ -221,11 +214,5 @@ async function openList(page: Page) {
 async function openSettingsDialog(page: Page, button: string) {
   await page.goto("/settings");
   await page.waitForLoadState("networkidle");
-  // Retried: a click before React has hydrated the button does nothing.
-  await expect(async () => {
-    await page.getByRole("button", { name: button }).click({ timeout: 1000 });
-    await expect(page.getByRole("dialog").or(page.getByRole("alertdialog"))).toBeVisible({
-      timeout: 1000,
-    });
-  }).toPass();
+  await openDialog(page, page.getByRole("button", { name: button }));
 }

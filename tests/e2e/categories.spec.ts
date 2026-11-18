@@ -1,5 +1,13 @@
 import type { Page } from "@playwright/test";
-import { addProduct, db, expect, savedCategoryNames, seedDefaults, test } from "./fixtures";
+import {
+  addProduct,
+  db,
+  expect,
+  openDialog as openDialogWith,
+  savedCategoryNames,
+  seedDefaults,
+  test,
+} from "./fixtures";
 
 const DEFAULT_NAMES = [
   "מוצרי חלב",
@@ -33,14 +41,9 @@ async function openSettings(page: Page) {
   await page.waitForLoadState("networkidle");
 }
 
-/** Clicks a button that opens a dialog, retrying until React has hydrated it. */
+/** Opens the dialog of the button with this name. */
 async function openDialog(page: Page, button: string) {
-  await expect(async () => {
-    await page.getByRole("button", { name: button }).click({ timeout: 1000 });
-    await expect(page.getByRole("dialog").or(page.getByRole("alertdialog"))).toBeVisible({
-      timeout: 1000,
-    });
-  }).toPass();
+  await openDialogWith(page, page.getByRole("button", { name: button }));
 }
 
 test("lists the default categories in order, with General marked and not deletable @mobile", async ({

@@ -5,6 +5,7 @@ import { appConfig } from "@/config/app.config";
 import { requireUser } from "@/modules/auth/current-user";
 import { updateList } from "@/modules/history/purchase";
 import { type ListSnapshot, getListSnapshot } from "@/modules/list/snapshot";
+import { notifyListChanged } from "@/modules/realtime/server";
 import {
   type AddOutcome,
   type DeletedProduct,
@@ -214,6 +215,8 @@ export async function updateListAction(seenIds: unknown): Promise<ListActionResu
 // ---- helpers ----
 
 async function success(message?: string, undo?: DeletedProduct): Promise<ListActionResult> {
+  // The other phone reloads (spec 12.2); this one shows the list returned here.
+  notifyListChanged();
   return { ok: true, list: await getListSnapshot(), message, undo };
 }
 

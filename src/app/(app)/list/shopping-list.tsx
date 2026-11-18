@@ -64,6 +64,7 @@ import {
   setCheckedAction,
   setQuantityAction,
 } from "../list-actions";
+import { useRealtime } from "../realtime";
 import { ClearListDialog } from "./clear-list-dialog";
 import { UpdateListDialog } from "./update-list-dialog";
 import { ProductFormDialog } from "./product-form-dialog";
@@ -94,6 +95,7 @@ const COLLAPSED_KEY = "ourbasket:collapsed-categories";
 export function ShoppingList({ initial, palette, quantityMax }: Props) {
   const t = useTranslations();
   const dndId = useId();
+  const { reportRevision } = useRealtime();
   const [list, setList] = useState(initial);
   // A newer list rendered by the server (for example, coming back to this page).
   const [seen, setSeen] = useState(initial);
@@ -122,6 +124,8 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
   /** Shows a list from the server, unless the one shown is newer. */
   function apply(next: ListSnapshot) {
     setList((current) => (next.revision >= current.revision ? next : current));
+    // The real-time event for this revision (our own change) needs no reload.
+    reportRevision(next.revision);
   }
 
   /**

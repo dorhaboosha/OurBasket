@@ -4,11 +4,11 @@ A shared shopping list for two people (Dor and Maayan), in Hebrew and right-to-l
 One list, edited from any device, synced in real time, with categories, checked items,
 purchase history and export to WhatsApp text or a printable page.
 
-> **Status:** Steps 1–7 are done: the project setup (Next.js, Chakra UI in RTL, Hebrew
+> **Status:** Steps 1–8 are done: the project setup (Next.js, Chakra UI in RTL, Hebrew
 > text, tests, CI), the database (Prisma, tables, rules, seed), sign-in with Google for
 > the two allowed accounts, the navigation with category management in the settings,
-> the shopping list itself, "update list", and the purchase history. Next: real-time
-> sync between the two phones (step 8). See
+> the shopping list itself, "update list", the purchase history, and real-time sync
+> between the two phones. Next: exporting the list (step 9). See
 > [`OurBasketSpec.md`](OurBasketSpec.md) for the full spec and the decision log (Hebrew).
 
 ## Tech stack
@@ -20,7 +20,7 @@ purchase history and export to WhatsApp text or a printable page.
 | Database | PostgreSQL 16 with [Prisma 7](https://www.prisma.io) (`@prisma/adapter-pg`)                                                       |
 | Auth     | [Better Auth](https://www.better-auth.com) with Google                                                                             |
 | Tests    | [Vitest](https://vitest.dev), [Playwright](https://playwright.dev), [axe-core](https://github.com/dequelabs/axe-core)              |
-| Planned  | [Pusher Channels](https://pusher.com) (step 8)                                                                                     |
+| Sync     | [Pusher Channels](https://pusher.com) (private channel, events carry only a revision)                                              |
 | Hosting  | [Vercel](https://vercel.com) (Frankfurt) + [Neon](https://neon.tech) (Frankfurt) — from step 11                                    |
 
 ## Running locally
@@ -45,6 +45,10 @@ In `.env`, fill in:
 - `BETTER_AUTH_SECRET`: any random string of 32+ characters:
   `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`
 - `USER_EMAIL_DOR`, `USER_EMAIL_MAAYAN`: the two Google accounts allowed to sign in.
+- `PUSHER_APP_ID`, `PUSHER_KEY`, `PUSHER_SECRET`, `PUSHER_CLUSTER`, and
+  `NEXT_PUBLIC_PUSHER_KEY` / `NEXT_PUBLIC_PUSHER_CLUSTER` (the same key and cluster):
+  from a Pusher Channels app (App Keys). Without them the app still works; the other
+  phone just catches up when it comes back to the app instead of at once.
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`: an OAuth client of type "Web application"
   in the Google Cloud project "OurBasket", with the JavaScript origin
   `http://localhost:3000` and the redirect URI
@@ -111,6 +115,20 @@ password.
   - "General" is the system category: it can be renamed and recolored, never deleted.
   - Edits are checked against the version they started from: if the other person saved
     first, the save is refused and the latest data is shown.
+
+## Real-time sync
+
+Both phones stay current (spec 12):
+
+- After every saved change, the server sends `list-changed` with the new revision on the
+  private channel `private-ourbasket` (after the response, so it never slows an action).
+  The event carries no data: the other phone reloads the page from the server.
+- Only a signed-in, allowed user may listen: Pusher asks
+  [`/api/pusher/auth`](src/app/api/pusher/auth/route.ts), which checks the session.
+- Events aren't relied on: the app also reloads when it becomes visible again, when the
+  internet comes back, and when Pusher reconnects (reloads close together become one).
+  An open form keeps what was typed.
+- Without an internet connection, a notice says the app needs one.
 
 ## Database
 
@@ -192,7 +210,8 @@ src/
   config/              app.config.ts and the contrast helper
   i18n/                next-intl setup (one fixed locale)
   lib/                 Prisma client, Better Auth server and client, name normalization
-  modules/             domain logic: auth/ (allowlist, hooks, current user),
+  modules/             domain logic: realtime/ (Pusher events and permission),
+                       auth/ (allowlist, hooks, current user),
                        categories/ (validation, database actions, seed),
                        products/ (validation, database actions),
                        list/ (revision, snapshot, how the screen shows it),
