@@ -45,13 +45,24 @@ export const HISTORY_PAGE_SIZE = 20;
 
 /**
  * The newest purchases first, a page at a time (spec 19: history isn't loaded all at
- * once). cursor is the last card's id from the previous page.
+ * once). cursor is where the previous page ended: its last card's time and id, so it
+ * still works if that purchase was deleted since.
  */
 export async function listHistory(cursor?: string): Promise<HistoryPage> {
+  const after = decodeCursor(cursor);
   const records = await prisma.purchaseRecord.findMany({
     orderBy: [{ purchasedAt: "desc" }, { id: "desc" }],
     take: HISTORY_PAGE_SIZE + 1,
-    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    ...(after
+      ? {
+          where: {
+            OR: [
+              { purchasedAt: { lt: after.purchasedAt } },
+              { purchasedAt: after.purchasedAt, id: { lt: after.id } },
+            ],
+          },
+        }
+      : {}),
     select: {
       id: true,
       purchasedAt: true,
@@ -74,8 +85,21 @@ export async function listHistory(cursor?: string): Promise<HistoryPage> {
         icons: [...categories.values()],
       };
     }),
-    nextCursor: records.length > HISTORY_PAGE_SIZE ? page[page.length - 1].id : null,
+    nextCursor: records.length > HISTORY_PAGE_SIZE ? encodeCursor(page[page.length - 1]) : null,
   };
+}
+
+/** "<ISO time>|<id>": a page's end. */
+function encodeCursor(record: { purchasedAt: Date; id: string }): string {
+  return `${record.purchasedAt.toISOString()}|${record.id}`;
+}
+
+/** The page end in a cursor, or null for anything else (then: the first page). */
+function decodeCursor(cursor: string | undefined): { purchasedAt: Date; id: string } | null {
+  const [time, id, ...rest] = (cursor ?? "").split("|");
+  const purchasedAt = new Date(time);
+  if (!id || rest.length > 0 || Number.isNaN(purchasedAt.getTime())) return null;
+  return { purchasedAt, id };
 }
 
 /** One purchase with its products, or null if it doesn't exist (deleted meanwhile). */
@@ -153,10 +177,10 @@ async function addRecordToListOnce(recordId: string): Promise<AddToListOutcome> 
       ORDER BY id FOR UPDATE`;
     const byName = new Map(listed.map((product) => [product.normalizedName, product]));
 
-    let added = 0;
     let merged = 0;
     let capped = 0;
     const nextOrder = new Map<string, number>();
+    const toCreate: Prisma.ProductUncheckedCreateInput[] = [];
     for (const item of record.items) {
       const existing = byName.get(item.normalizedName);
       if (existing) {
@@ -169,6 +193,7 @@ async function addRecordToListOnce(recordId: string): Promise<AddToListOutcome> 
         merged += 1;
         continue;
       }
+      // Places are given in the purchase's order, so the list shows them in that order.
       const categoryId = existingCategories.has(item.categoryId) ? item.categoryId : general.id;
       if (!nextOrder.has(categoryId)) {
         const last = await tx.product.aggregate({
@@ -179,17 +204,20 @@ async function addRecordToListOnce(recordId: string): Promise<AddToListOutcome> 
       }
       const sortOrder = nextOrder.get(categoryId)!;
       nextOrder.set(categoryId, sortOrder + 1);
-      await tx.product.create({
-        data: {
-          name: item.productName,
-          normalizedName: item.normalizedName,
-          quantity: item.quantity,
-          categoryId,
-          sortOrder,
-        },
+      toCreate.push({
+        name: item.productName,
+        normalizedName: item.normalizedName,
+        quantity: item.quantity,
+        categoryId,
+        sortOrder,
       });
-      added += 1;
     }
+    // Created in name order: two adds at once (from different purchases) then claim the
+    // same new names in the same order, so they can't wait on each other's.
+    toCreate.sort((a, b) => (a.normalizedName < b.normalizedName ? -1 : 1));
+    for (const data of toCreate) await tx.product.create({ data });
+
+    const added = toCreate.length;
     if (added + merged > 0) await bumpRevision(tx);
     return { ok: true as const, added, merged, capped };
   });

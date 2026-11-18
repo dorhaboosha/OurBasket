@@ -4,7 +4,7 @@ import { Box, Button, HStack, Link, Stack, Text } from "@chakra-ui/react";
 import { ChevronLeft, ListChecks } from "lucide-react";
 import NextLink from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { toaster } from "@/components/toaster";
 import type { HistoryCard, HistoryPage } from "@/modules/history/history";
 import { PURCHASE_DATE } from "@/modules/history/format";
@@ -18,18 +18,26 @@ export function HistoryList({ initial }: { initial: HistoryPage }) {
   // A page left for another stays alive (Next.js keeps visited pages, with their state):
   // when the server sends the history again (a purchase was made meanwhile), show it.
   const [seen, setSeen] = useState(initial);
+  // Which history the cards are from: a "load more" answer for an older one is dropped.
+  const generation = useRef(initial);
   if (initial !== seen) {
     setSeen(initial);
     setCards(initial.cards);
     setNextCursor(initial.nextCursor);
   }
   const [loading, startLoading] = useTransition();
+  useEffect(() => {
+    generation.current = initial;
+  }, [initial]);
 
   function loadMore() {
     if (!nextCursor) return;
+    const from = initial;
     startLoading(async () => {
       try {
         const page = await loadHistoryAction(nextCursor);
+        // The history was sent again meanwhile: this page belongs to the old one.
+        if (generation.current !== from) return;
         // A card can already be shown if purchases were deleted in between: once only.
         setCards((current) => {
           const shown = new Set(current.map((card) => card.id));

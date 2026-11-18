@@ -6,7 +6,8 @@ import { Suspense } from "react";
 import { appConfig } from "@/config/app.config";
 import { requireUser } from "@/modules/auth/current-user";
 import { PURCHASE_DATE } from "@/modules/history/format";
-import { type HistoryItem, getHistoryRecord } from "@/modules/history/history";
+import { groupByCategory } from "@/modules/history/group";
+import { getHistoryRecord } from "@/modules/history/history";
 import { RecordActions } from "./record-actions";
 
 // One purchase (spec 10.3): its products grouped by category, as they were when bought,
@@ -120,32 +121,4 @@ async function Purchase({ params }: Pick<PageProps<"/history/[id]">, "params">) 
       </Stack>
     </Stack>
   );
-}
-
-/**
- * The items by category as it was when bought (name, color and emoji from then), in the
- * list's order. Keyed by the category's id and name: a category renamed between two
- * purchases is still one group within each record.
- */
-function groupByCategory(items: HistoryItem[]) {
-  const groups: {
-    key: string;
-    name: string;
-    color: string;
-    icon: string;
-    items: HistoryItem[];
-  }[] = [];
-  for (const item of items) {
-    const last = groups.at(-1);
-    if (last && last.key === item.categoryId) last.items.push(item);
-    else
-      groups.push({
-        key: item.categoryId,
-        name: item.categoryName,
-        color: item.categoryColor,
-        icon: item.categoryIcon,
-        items: [item],
-      });
-  }
-  return groups;
 }

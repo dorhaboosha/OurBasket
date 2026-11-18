@@ -102,6 +102,30 @@ describe("listHistory", () => {
   });
 });
 
+describe("listHistory paging", () => {
+  it("continues after the page's last purchase, even if it was deleted since", async () => {
+    await prisma.purchaseRecord.createMany({
+      data: Array.from({ length: HISTORY_PAGE_SIZE + 3 }, (_, index) => ({
+        purchasedAt: new Date(Date.UTC(2026, 0, 1, 0, index)),
+      })),
+    });
+    const first = await listHistory();
+    await deleteHistoryRecord(first.cards.at(-1)!.id);
+    const second = await listHistory(first.nextCursor!);
+    expect(second.cards).toHaveLength(3);
+    expect(second.cards[0].purchasedAt.getTime()).toBeLessThan(
+      first.cards.at(-1)!.purchasedAt.getTime(),
+    );
+  });
+
+  it("treats a malformed cursor as the first page", async () => {
+    await buy([["חלב", 1, "מוצרי חלב"]]);
+    for (const cursor of ["nonsense", "|", "2026-01-01T00:00:00.000Z", "x|y|z"]) {
+      expect((await listHistory(cursor)).cards).toHaveLength(1);
+    }
+  });
+});
+
 describe("getHistoryRecord", () => {
   it("has the products as they were bought, in the list's order", async () => {
     const id = await buy([
@@ -175,6 +199,29 @@ describe("addRecordToList", () => {
     expect(await onList()).toEqual({ חלב: [2, "מוצרי חלב"], לחם: [2, "לחמים ומאפים"] });
   });
 
+  it("adds two purchases with the same new products at once, without a deadlock", async () => {
+    for (let round = 0; round < 5; round += 1) {
+      await prisma.product.deleteMany({});
+      const names = ["א", "ב", "ג", "ד"];
+      const forward = await addPurchaseRecord(names);
+      const backward = await addPurchaseRecord([...names].reverse());
+      const results = await Promise.allSettled([
+        addRecordToList(forward),
+        addRecordToList(backward),
+      ]);
+      expect(results.map((result) => result.status)).toEqual(["fulfilled", "fulfilled"]);
+      expect(Object.values(await onList()).map(([quantity]) => quantity)).toEqual([2, 2, 2, 2]);
+    }
+  });
+
+  it("keeps the purchase's order for the products it adds", async () => {
+    const id = await addPurchaseRecord(["ג", "א", "ב"]);
+    await addRecordToList(id);
+    const { categories } = await getListSnapshot();
+    const general = categories.find((c) => c.isSystem)!;
+    expect(general.products.map((p) => p.name)).toEqual(["ג", "א", "ב"]);
+  });
+
   it("reports a deleted record", async () => {
     expect(await addRecordToList(crypto.randomUUID())).toEqual({ ok: false, reason: "notFound" });
   });
@@ -193,3 +240,25 @@ describe("deleteHistoryRecord", () => {
     expect(await deleteHistoryRecord(id)).toBe(false);
   });
 });
+
+/** A purchase of these products, one each, all in General, in this order. */
+async function addPurchaseRecord(names: string[]) {
+  const general = await category("כללי");
+  const record = await prisma.purchaseRecord.create({
+    data: {
+      items: {
+        create: names.map((name, position) => ({
+          productName: name,
+          normalizedName: name,
+          quantity: 1,
+          categoryId: general.id,
+          categoryName: general.name,
+          categoryColor: general.color,
+          categoryIcon: general.icon,
+          position,
+        })),
+      },
+    },
+  });
+  return record.id;
+}
