@@ -15,6 +15,15 @@ export const E2E_ENV = {
   USER_EMAIL_MAAYAN: "maayan@e2e.test",
   GOOGLE_CLIENT_ID: "e2e-client-id",
   GOOGLE_CLIENT_SECRET: "e2e-client-secret",
+  // Never the real Pusher: no app id or cluster (no events are sent) and no public key (the
+  // browser doesn't connect). A fake key and secret let the auth endpoint sign. Empty
+  // values also stop Next.js from loading real ones from .env.
+  PUSHER_APP_ID: "",
+  PUSHER_KEY: "e2e-pusher-key",
+  PUSHER_SECRET: "e2e-pusher-secret",
+  PUSHER_CLUSTER: "",
+  NEXT_PUBLIC_PUSHER_KEY: "",
+  NEXT_PUBLIC_PUSHER_CLUSTER: "",
 };
 
 export default defineConfig({

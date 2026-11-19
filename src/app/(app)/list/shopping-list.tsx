@@ -44,7 +44,7 @@ import {
 import { toaster } from "@/components/toaster";
 import type { PaletteColor } from "@/config/app.config";
 import type { DeletedProduct } from "@/modules/products/products";
-import type { ListCategory, ListSnapshot } from "@/modules/list/snapshot";
+import type { ListCategory, ListProduct, ListSnapshot } from "@/modules/list/snapshot";
 import {
   type Containers,
   type OptimisticChange,
@@ -64,6 +64,7 @@ import {
   setCheckedAction,
   setQuantityAction,
 } from "../list-actions";
+import { useRealtime } from "../realtime";
 import { ClearListDialog } from "./clear-list-dialog";
 import { UpdateListDialog } from "./update-list-dialog";
 import { ProductFormDialog } from "./product-form-dialog";
@@ -77,7 +78,8 @@ type Props = {
 
 type OpenDialog =
   | { kind: "add" }
-  | { kind: "edit"; id: string }
+  /** The product as last seen: kept if it's deleted meanwhile, so the form stays open. */
+  | { kind: "edit"; product: ListProduct }
   /** The list as it was when the question was asked: only that list is cleared. */
   | { kind: "clear"; revision: number; productCount: number }
   /** The products checked when the question was asked: only those can be bought. */
@@ -94,6 +96,7 @@ const COLLAPSED_KEY = "ourbasket:collapsed-categories";
 export function ShoppingList({ initial, palette, quantityMax }: Props) {
   const t = useTranslations();
   const dndId = useId();
+  const { reportRevision } = useRealtime();
   const [list, setList] = useState(initial);
   // A newer list rendered by the server (for example, coming back to this page).
   const [seen, setSeen] = useState(initial);
@@ -122,6 +125,8 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
   /** Shows a list from the server, unless the one shown is newer. */
   function apply(next: ListSnapshot) {
     setList((current) => (next.revision >= current.revision ? next : current));
+    // The real-time event for this revision (our own change) needs no reload.
+    reportRevision(next.revision);
   }
 
   /**
@@ -261,7 +266,12 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
     onDragCancel: ({ active }) => t("productReorder.cancel", { name: nameOf(active.id) }),
   };
 
-  const editing = dialog?.kind === "edit" ? findProduct(dialog.id)?.product : undefined;
+  // The product being edited, as it is now; none if it was deleted or bought on the other
+  // phone meanwhile. The form then stays open with what was typed, and says so.
+  const editing = dialog?.kind === "edit" ? findProduct(dialog.product.id)?.product : undefined;
+  if (dialog?.kind === "edit" && editing && editing.version !== dialog.product.version) {
+    setDialog({ kind: "edit", product: editing });
+  }
 
   return (
     <Stack gap="4">
@@ -428,7 +438,7 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
                         // stays, showing its quantity, if the delete is refused.
                         return quantity > 0;
                       }}
-                      onEdit={() => setDialog({ kind: "edit", id: product.id })}
+                      onEdit={() => setDialog({ kind: "edit", product })}
                     />
                   ))}
                 </SortableContext>
@@ -445,9 +455,10 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
           onResult={(result) => startTransition(() => report(result, true))}
         />
       )}
-      {dialog?.kind === "edit" && editing && (
+      {dialog?.kind === "edit" && (
         <ProductFormDialog
-          product={editing}
+          product={editing ?? dialog.product}
+          gone={!editing}
           categories={shown.categories}
           onClose={() => setDialog(null)}
           onResult={(result) => startTransition(() => report(result, true))}

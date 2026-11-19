@@ -1,6 +1,6 @@
 import { createHmac, randomUUID } from "node:crypto";
 import AxeBuilder from "@axe-core/playwright";
-import { test as base, expect, type Page } from "@playwright/test";
+import { test as base, expect, type Locator, type Page } from "@playwright/test";
 import pg from "pg";
 import { E2E_BASE_URL, E2E_ENV } from "../../playwright.config";
 import { defaultCategoryRows } from "../../src/modules/categories/seed";
@@ -168,6 +168,20 @@ export const test = base.extend<Fixtures>({
     { auto: true },
   ],
 });
+
+/**
+ * Clicks a button that opens a dialog, and returns the dialog. Retried: a click before
+ * React has hydrated the button does nothing. Never clicks again once a dialog is open
+ * (on a slow machine it can show late; the button is then behind it).
+ */
+export async function openDialog(page: Page, button: Locator) {
+  const dialog = page.getByRole("dialog").or(page.getByRole("alertdialog"));
+  await expect(async () => {
+    if (!(await dialog.isVisible())) await button.click({ timeout: 1000 });
+    await expect(dialog).toBeVisible({ timeout: 2000 });
+  }).toPass();
+  return dialog;
+}
 
 /**
  * Accessibility violations on the current page (axe-core, WCAG 2.1 A and AA). They catch

@@ -1,5 +1,5 @@
 import type { Page } from "@playwright/test";
-import { addProduct, db, expect, seedDefaults, test } from "./fixtures";
+import { addProduct, db, expect, openDialog, seedDefaults, test } from "./fixtures";
 
 test.beforeEach(async ({ signInAs }) => {
   await seedDefaults();
@@ -40,10 +40,7 @@ async function openList(page: Page) {
 }
 
 async function openAddDialog(page: Page) {
-  await expect(async () => {
-    await page.getByRole("button", { name: "הוספת מוצר" }).first().click({ timeout: 1000 });
-    await expect(page.getByRole("dialog", { name: "מוצר חדש" })).toBeVisible({ timeout: 1000 });
-  }).toPass();
+  await openDialog(page, page.getByRole("button", { name: "הוספת מוצר" }).first());
   return page.getByRole("dialog", { name: "מוצר חדש" });
 }
 
@@ -257,12 +254,7 @@ test.describe("checking off", () => {
 
 test.describe("editing", () => {
   async function openEdit(page: Page, name: string) {
-    await expect(async () => {
-      await page.getByRole("button", { name: `עריכת ${name}` }).click({ timeout: 1000 });
-      await expect(page.getByRole("dialog", { name: "עריכת מוצר" })).toBeVisible({
-        timeout: 1000,
-      });
-    }).toPass();
+    await openDialog(page, page.getByRole("button", { name: `עריכת ${name}` }));
     return page.getByRole("dialog", { name: "עריכת מוצר" });
   }
 
@@ -320,6 +312,28 @@ test.describe("editing", () => {
     expect(await saved("חלב 3%")).toEqual([
       { quantity: 4, isChecked: false, category: "מוצרי חלב" },
     ]);
+  });
+
+  test("a product deleted on another device keeps the form and what was typed", async ({
+    page,
+  }) => {
+    await addProduct("מוצרי חלב", "חלב");
+    await openList(page);
+    const dialog = await openEdit(page, "חלב");
+    await dialog.getByLabel("שם המוצר").fill("חלב 3%");
+    // Meanwhile, on another device: the product is deleted.
+    await db.query(`DELETE FROM product WHERE name = 'חלב'`);
+
+    await dialog.getByRole("button", { name: "שמירה" }).click();
+    await expect(dialog.getByTestId("product-form-message")).toHaveText(
+      "המוצר כבר לא ברשימה: הוא נמחק במכשיר אחר.",
+    );
+    await expect(dialog.getByLabel("שם המוצר")).toHaveValue("חלב 3%");
+    await expect(dialog.getByRole("button", { name: "שמירה" })).toBeDisabled();
+    await expect(dialog.getByRole("button", { name: "מחיקת המוצר" })).toBeDisabled();
+    await dialog.getByRole("button", { name: "ביטול" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByTestId("empty-list")).toBeVisible();
   });
 
   test("deletes from the edit form, with undo", async ({ page }) => {

@@ -1,5 +1,12 @@
 import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
+import { prisma } from "@/lib/prisma";
+
+/** The revision of everything shared (list, categories, history) right now. */
+export async function currentRevision(): Promise<number> {
+  const state = await prisma.listState.findUnique({ where: { id: 1 }, select: { revision: true } });
+  return state?.revision ?? 0;
+}
 
 /**
  * Raises the list's revision. Every saved change to the list or its categories calls it,

@@ -10,6 +10,7 @@ import {
   listHistory,
 } from "@/modules/history/history";
 import { isId } from "@/modules/products/validation";
+import { notifyListChanged } from "@/modules/realtime/server";
 
 // The history screen's actions (spec 10). Each checks the session on the server first.
 
@@ -28,6 +29,7 @@ export async function addRecordToListAction(id: unknown): Promise<HistoryActionR
   if (!isId(id)) return { ok: false, message: t("notFound") };
   const outcome = await addRecordToList(id);
   if (!outcome.ok) return { ok: false, message: t("notFound") };
+  notifyListChanged();
   const parts = [
     outcome.added > 0 ? t("added", { count: outcome.added }) : null,
     outcome.merged > 0 ? t("merged", { count: outcome.merged }) : null,
@@ -45,5 +47,6 @@ export async function deleteHistoryRecordAction(id: unknown): Promise<HistoryAct
   if (!isId(id) || !(await deleteHistoryRecord(id))) {
     return { ok: false, message: t("notFound") };
   }
+  notifyListChanged();
   return { ok: true, message: t("deleted") };
 }
