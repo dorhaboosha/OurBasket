@@ -296,10 +296,10 @@ One-time setup:
    it has the tables and the default categories; auto-delete: never). In its SQL Editor,
    `DELETE FROM "user"; DELETE FROM "verification";` removes the copied accounts and
    sessions. A branch also copies the database roles with their passwords, so reset the
-   `ourbasket_owner` password on `preview` (Roles; this branch only). The Preview variables are its connection strings and a separate
-   `BETTER_AUTH_SECRET` (Better Auth refuses to start without one, even on the login
-   page). Preview doesn't inherit the Production variables, and the Production secret
-   stays Production-only.
+   `ourbasket_owner` password on `preview` (Roles; this branch only). The Preview
+   variables are its connection strings and a separate `BETTER_AUTH_SECRET` (Better Auth
+   refuses to start without one, even on the login page). Preview doesn't inherit the
+   Production variables, and the Production secret stays Production-only.
 6. Vercel > Settings > Build and Deployment > Deployment Checks: add the GitHub check
    "Lint, types, tests and build".
 
