@@ -295,7 +295,8 @@ One-time setup:
 5. After the first deploy: a Neon branch `preview` (from `production`, with its data, so
    it has the tables and the default categories; auto-delete: never). In its SQL Editor,
    `DELETE FROM "user"; DELETE FROM "verification";` removes the copied accounts and
-   sessions. The Preview variables are its connection strings and a separate
+   sessions. A branch also copies the database roles with their passwords, so reset the
+   `ourbasket_owner` password on `preview` (Roles; this branch only). The Preview variables are its connection strings and a separate
    `BETTER_AUTH_SECRET` (Better Auth refuses to start without one, even on the login
    page). Preview doesn't inherit the Production variables, and the Production secret
    stays Production-only.
