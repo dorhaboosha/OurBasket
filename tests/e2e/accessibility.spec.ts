@@ -7,6 +7,7 @@ import {
   db,
   expect,
   openDialog,
+  openMenu,
   seedDefaults,
   smallTouchTargets,
   test,
@@ -15,7 +16,7 @@ import {
 // Every screen and dialog: axe-core (WCAG 2.1 A and AA) on both projects, and 44×44 touch
 // targets on the phone-sized one.
 const PUBLIC_PAGES = ["/login", "/login?error=not_allowed", "/privacy"];
-const SIGNED_IN_PAGES = ["/", "/history", "/settings"];
+const SIGNED_IN_PAGES = ["/", "/history", "/settings", "/print"];
 
 test.describe("signed out", () => {
   for (const path of PUBLIC_PAGES) {
@@ -117,11 +118,35 @@ test.describe("the list with products", () => {
     });
   }
 
+  test("the export menu passes the accessibility checks, with 44×44 touch targets @mobile", async ({
+    page,
+  }, testInfo) => {
+    await openList(page);
+    await openMenu(page, page.getByRole("button", { name: "ייצוא" }));
+    expect(await accessibilityViolations(page)).toEqual([]);
+    if (testInfo.project.name === "mobile") expect(await smallTouchTargets(page)).toEqual([]);
+  });
+
+  test("the manual copy dialog passes the accessibility checks, with 44×44 touch targets @mobile", async ({
+    page,
+  }, testInfo) => {
+    // No clipboard here: the text is shown to copy by hand.
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "clipboard", { value: undefined });
+    });
+    await openList(page);
+    await openMenu(page, page.getByRole("button", { name: "ייצוא" }));
+    await page.getByRole("menuitem", { name: "העתקה ל-WhatsApp" }).click();
+    await expect(page.getByRole("dialog", { name: "העתקת הרשימה" })).toBeVisible();
+    expect(await accessibilityViolations(page)).toEqual([]);
+    if (testInfo.project.name === "mobile") expect(await smallTouchTargets(page)).toEqual([]);
+  });
+
   test("the undo message passes the accessibility checks, with 44×44 touch targets @mobile", async ({
     page,
   }, testInfo) => {
     await openList(page);
-    await page.getByRole("button", { name: "הורדת אחד מסוללות" }).click();
+    await page.getByRole("button", { name: "הקטנת הכמות של סוללות" }).click();
     await expect(page.getByRole("button", { name: "בטל" })).toBeVisible();
     expect(await accessibilityViolations(page)).toEqual([]);
     if (testInfo.project.name === "mobile") expect(await smallTouchTargets(page)).toEqual([]);

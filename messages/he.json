@@ -20,8 +20,8 @@
     "move": "הזזת {name}",
     "edit": "עריכת {name}",
     "quantity": "כמות של {name}",
-    "increase": "הוספת אחד ל{name}",
-    "decrease": "הורדת אחד מ{name}",
+    "increase": "הגדלת הכמות של {name}",
+    "decrease": "הקטנת הכמות של {name}",
     "undo": "בטל",
     "saving": "שומרים...",
     "generic": "משהו השתבש. בדקו את החיבור לאינטרנט ונסו שוב."
@@ -236,9 +236,9 @@
   "productMessages": {
     "added": "{name} נוסף לרשימה.",
     "restored": "{name} הוחזר לרשימה.",
-    "saved": "השינויים ב{name} נשמרו.",
-    "merged": "{name} כבר ברשימה, ב{category}: הכמות עודכנה ל-{quantity}.",
-    "mergedCapped": "{name} כבר ברשימה, ב{category}: הכמות הוגבלה ל-{quantity}, המקסימום.",
+    "saved": "{name}: השינויים נשמרו.",
+    "merged": "{name} כבר ברשימה, בקטגוריה {category}: הכמות עודכנה ל-{quantity}.",
+    "mergedCapped": "{name} כבר ברשימה, בקטגוריה {category}: הכמות הוגבלה ל-{quantity}, המקסימום.",
     "deleted": "{name} נמחק מהרשימה.",
     "atMax": "הכמות המקסימלית היא {max}.",
     "cleared": "הרשימה נוקתה.",
@@ -270,11 +270,27 @@
   "productReorder": {
     "instructions": "כדי להזיז מוצר עם המקלדת: עמדו על הידית, לחצו רווח, הזיזו עם החיצים למעלה ולמטה (גם לקטגוריה אחרת), ולחצו רווח שוב כדי להניח. Escape מבטל.",
     "start": "הרמתם את {name}.",
-    "over": "{name} מעל {target}, ב{category}.",
-    "end": "{name} הונח ב{category}.",
+    "over": "{name} מעל {target}, בקטגוריה {category}.",
+    "end": "{name} הונח בקטגוריה {category}.",
     "cancel": "ההזזה בוטלה. {name} חזר למקומו."
   },
   "realtime": {
     "offline": "אין חיבור לאינטרנט. כדי לראות את הרשימה העדכנית ולשמור שינויים צריך חיבור."
+  },
+  "export": {
+    "button": "ייצוא",
+    "copy": "העתקה ל-WhatsApp",
+    "print": "הדפסה / PDF",
+    "title": "OurBasket — רשימת קניות",
+    "copied": "הרשימה הועתקה. אפשר להדביק אותה ב-WhatsApp.",
+    "manualTitle": "העתקת הרשימה",
+    "manualHelp": "לא הצלחנו להעתיק אוטומטית. סמנו את הטקסט והעתיקו אותו ידנית.",
+    "manualLabel": "הרשימה כטקסט",
+    "close": "סגירה",
+    "created": "נוצר: {date}",
+    "quantity": "כמות: {count}",
+    "empty": "אין מה לקנות: כל המוצרים ברשימה סומנו, או שהרשימה ריקה.",
+    "printButton": "הדפסה / שמירה כ-PDF",
+    "back": "חזרה לרשימה"
   }
 }

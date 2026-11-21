@@ -183,6 +183,16 @@ export async function openDialog(page: Page, button: Locator) {
   return dialog;
 }
 
+/** Clicks a button that opens a menu, and returns the menu (retried, as openDialog). */
+export async function openMenu(page: Page, button: Locator) {
+  const menu = page.getByRole("menu");
+  await expect(async () => {
+    if (!(await menu.isVisible())) await button.click({ timeout: 1000 });
+    await expect(menu).toBeVisible({ timeout: 2000 });
+  }).toPass();
+  return menu;
+}
+
 /**
  * Accessibility violations on the current page (axe-core, WCAG 2.1 A and AA). They catch
  * contrast, names, labels and ARIA mistakes; keyboard use is covered by the other tests.

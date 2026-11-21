@@ -4,11 +4,12 @@ A shared shopping list for two people (Dor and Maayan), in Hebrew and right-to-l
 One list, edited from any device, synced in real time, with categories, checked items,
 purchase history and export to WhatsApp text or a printable page.
 
-> **Status:** Steps 1–8 are done: the project setup (Next.js, Chakra UI in RTL, Hebrew
+> **Status:** Steps 1–9 are done: the project setup (Next.js, Chakra UI in RTL, Hebrew
 > text, tests, CI), the database (Prisma, tables, rules, seed), sign-in with Google for
 > the two allowed accounts, the navigation with category management in the settings,
-> the shopping list itself, "update list", the purchase history, and real-time sync
-> between the two phones. Next: exporting the list (step 9). See
+> the shopping list itself, "update list", the purchase history, real-time sync between
+> the two phones, and exporting the list. Next: installing it as an app (PWA, step 10).
+> See
 > [`OurBasketSpec.md`](OurBasketSpec.md) for the full spec and the decision log (Hebrew).
 
 ## Tech stack
@@ -92,6 +93,8 @@ password.
     products in a new history record, as they are (names, quantities, categories), and
     removes them from the list. Only products still checked are bought: one the other
     phone unchecked meanwhile stays on the list.
+  - "Export" (on while something is left to buy) copies the list for WhatsApp or opens
+    the print page. See [Export](#export).
 - **Navigation:** a sidebar on computers and a bar at the bottom of the screen on
   phones, with the list, the history and the settings. The top bar shows the app's
   name and who is signed in.
@@ -115,6 +118,30 @@ password.
   - "General" is the system category: it can be renamed and recolored, never deleted.
   - Edits are checked against the version they started from: if the other person saved
     first, the save is refused and the latest data is shown.
+
+## Export
+
+Both include only the products not checked off yet, by category, in list order (spec 11).
+
+- **Copy for WhatsApp:** copies text like this to the clipboard, ready to paste:
+
+  ```text
+  OurBasket — רשימת קניות
+
+  🥛 מוצרי חלב
+  • חלב — 2
+  • גבינה צהובה — 1
+  ```
+
+  Each line starts with an invisible right-to-left mark, so a line starting with a Latin
+  word still reads right to left. If the clipboard can't be used, the text is shown,
+  selected, to copy by hand.
+
+- **Print / PDF:** opens [`/print`](src/app/print/page.tsx), a plain black-and-white
+  page with the date, the categories with their emoji, and an empty box by each product
+  to check off with a pen. It opens the browser's print dialog, where "Save as PDF" is one
+  of the printers. A product or a category heading is never cut between pages. No PDF is
+  made on the server.
 
 ## Real-time sync
 
@@ -212,7 +239,8 @@ src/
   config/              app.config.ts and the contrast helper
   i18n/                next-intl setup (one fixed locale)
   lib/                 Prisma client, Better Auth server and client, name normalization
-  modules/             domain logic: realtime/ (Pusher events and permission),
+  modules/             domain logic: export/ (what is exported, WhatsApp text),
+                       realtime/ (Pusher events and permission),
                        auth/ (allowlist, hooks, current user),
                        categories/ (validation, database actions, seed),
                        products/ (validation, database actions),

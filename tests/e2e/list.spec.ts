@@ -90,7 +90,9 @@ test.describe("adding", () => {
     await addThroughForm(page, "  coca   COLA ", "2", "🥛 מוצרי חלב");
 
     // The name as listed, not as typed.
-    await expect(page.getByText("Coca Cola כבר ברשימה, במשקאות: הכמות עודכנה ל-3.")).toBeVisible();
+    await expect(
+      page.getByText("Coca Cola כבר ברשימה, בקטגוריה משקאות: הכמות עודכנה ל-3."),
+    ).toBeVisible();
     await expect(rows(page)).toHaveCount(1);
     expect(await saved("Coca Cola")).toEqual([
       { quantity: 3, isChecked: false, category: "משקאות" },
@@ -135,22 +137,22 @@ test.describe("quantities", () => {
   test("+ and - change the quantity, and every press counts @mobile", async ({ page }) => {
     await addProduct("פירות וירקות", "עגבניות");
     await openList(page);
-    const plus = page.getByRole("button", { name: "הוספת אחד לעגבניות" });
+    const plus = page.getByRole("button", { name: "הגדלת הכמות של עגבניות" });
     await plus.click();
     await plus.click();
     await plus.click();
     await expect(quantity(page, "עגבניות")).toHaveValue("4");
-    await page.getByRole("button", { name: "הורדת אחד מעגבניות" }).click();
+    await page.getByRole("button", { name: "הקטנת הכמות של עגבניות" }).click();
     await expect.poll(async () => (await saved("עגבניות"))[0]?.quantity).toBe(3);
     await expect(quantity(page, "עגבניות")).toHaveValue("3");
     // Keyboard focus stays on the button between presses.
-    await expect(page.getByRole("button", { name: "הורדת אחד מעגבניות" })).toBeFocused();
+    await expect(page.getByRole("button", { name: "הקטנת הכמות של עגבניות" })).toBeFocused();
   });
 
   test("- at 1 deletes the product, and undo brings it back in its place", async ({ page }) => {
     for (const name of ["חלב", "גבינה", "יוגורט"]) await addProduct("מוצרי חלב", name);
     await openList(page);
-    await page.getByRole("button", { name: "הורדת אחד מגבינה" }).click();
+    await page.getByRole("button", { name: "הקטנת הכמות של גבינה" }).click();
 
     await expect(page.getByText("גבינה נמחק מהרשימה.")).toBeVisible();
     await expect.poll(() => namesIn(page, "מוצרי חלב")).toEqual(["חלב", "יוגורט"]);
@@ -271,7 +273,7 @@ test.describe("editing", () => {
     await dialog.getByRole("button", { name: "שמירה" }).click();
 
     await expect(dialog).toHaveCount(0);
-    await expect(page.getByText("השינויים בחלב שקדים נשמרו.")).toBeVisible();
+    await expect(page.getByText("חלב שקדים: השינויים נשמרו.")).toBeVisible();
     await expect.poll(() => namesIn(page, "משקאות")).toEqual(["מים", "חלב שקדים"]);
     await expect(section(page, "מוצרי חלב")).toHaveCount(0);
     expect(await saved("חלב שקדים")).toEqual([

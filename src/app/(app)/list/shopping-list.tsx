@@ -66,6 +66,7 @@ import {
 } from "../list-actions";
 import { useRealtime } from "../realtime";
 import { ClearListDialog } from "./clear-list-dialog";
+import { ExportMenu } from "./export-menu";
 import { UpdateListDialog } from "./update-list-dialog";
 import { ProductFormDialog } from "./product-form-dialog";
 import { ProductRow } from "./product-row";
@@ -330,6 +331,7 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
             {t("home.updateList")}
           </Button>
         )}
+        {productCount > 0 && <ExportMenu categories={shown.categories} say={say} />}
         {productCount > 0 && (
           <Button
             size="lg"
