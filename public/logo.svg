@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!--
+    OurBasket's logo, and the one source of every icon (spec 13): the favicon, and the
+    installed app's icons, made from it by src/app/icons/[name]/route.tsx. To change the
+    logo, replace this file. Keep the background the brand color (appConfig.themeColor),
+    and the drawing within the middle 80% circle, which Android never crops.
+  -->
+  <rect width="512" height="512" rx="112" fill="#0f766e"/>
+  <path d="M176 200C176 106 336 106 336 200" fill="none" stroke="#fff" stroke-width="32" stroke-linecap="round"/>
+  <rect x="96" y="196" width="320" height="48" rx="24" fill="#fff"/>
+  <path d="M120 264H392L366 382Q361 400 342 400H170Q151 400 146 382Z" fill="#fff"/>
+  <path d="M206 290V372M256 290V372M306 290V372" stroke="#0f766e" stroke-width="20" stroke-linecap="round"/>
+</svg>

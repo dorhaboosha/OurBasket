@@ -35,8 +35,10 @@ async function LoginContent({ searchParams }: Pick<PageProps<"/login">, "searchP
 
   return (
     <>
+      {/* eslint-disable-next-line @next/next/no-img-element -- a small SVG, nothing to optimize */}
+      <img src="/logo.svg" alt="" width={72} height={72} />
       <Heading as="h1" size="2xl">
-        🛒 {t("title")}
+        {t("title")}
       </Heading>
       {/* Says plainly what the site is, so the page doesn't read like a fake Google login. */}
       <Text>{t("about")}</Text>
