@@ -9,8 +9,9 @@ purchase history and export to WhatsApp text or a printable page.
 > the two allowed accounts, the navigation with category management in the settings,
 > the shopping list itself, "update list", the purchase history, real-time sync between
 > the two phones, exporting the list, and installing it as an app (PWA, logo and icons).
-> Next: deploying to Vercel (step 11). See [`OurBasketSpec.md`](OurBasketSpec.md) for
-> the full spec and the decision log (Hebrew).
+> Step 11: the app is deployed on Vercel, at https://ourbasket-kohl.vercel.app; checking
+> it on the phones is next, then the acceptance (step 12). See
+> [`OurBasketSpec.md`](OurBasketSpec.md) for the full spec and the decision log (Hebrew).
 
 ## Tech stack
 
@@ -262,9 +263,10 @@ are in [`docs/free-tier-limits.md`](docs/free-tier-limits.md).
   broken build never touches the database; a failed migration fails the deployment, and
   the previous one keeps serving. Migrations must therefore work with the code already
   running.
+- Production: **https://ourbasket-kohl.vercel.app** (Vercel project `ourbasket`).
 - Every push to `main` deploys to Production. `main` only takes Pull Requests whose CI
-  passed, and Vercel's Deployment Checks can also hold the deployment until the CI check
-  "Lint, types, tests and build" passes on `main`.
+  passed, and a Vercel Deployment Check holds the new version until the CI check
+  "Lint, types, tests and build" passes on `main` too.
 - Every Pull Request gets a Preview deployment, with its own database (a Neon branch), never
   the Production one. Google sign-in doesn't work there (its URL changes), so only the
   login and privacy pages can be checked; sign-in is checked locally and in Production.
@@ -274,23 +276,31 @@ are in [`docs/free-tier-limits.md`](docs/free-tier-limits.md).
 One-time setup:
 
 1. **Neon:** a project `ourbasket`, Postgres 16, region `aws-eu-central-1` (Frankfurt).
-   Its `main` branch is Production. Copy the pooled connection string (host contains
-   `-pooler`) for `DATABASE_URL` and the direct one for `DIRECT_URL`.
+   Its default branch, `production`, is Production. Copy the pooled connection string
+   (host contains `-pooler`) for `DATABASE_URL` and the direct one for `DIRECT_URL`.
 2. **Google Cloud** (project "OurBasket"): a second OAuth client, "OurBasket
-   (production)", with the JavaScript origin `https://<app>.vercel.app` and the redirect
-   URI `https://<app>.vercel.app/api/auth/callback/google`. Branding: home page
-   `/login`, privacy policy `/privacy`. Publish the app ("In production").
+   production", with the JavaScript origin `https://ourbasket-kohl.vercel.app` and the
+   redirect URI `https://ourbasket-kohl.vercel.app/api/auth/callback/google`. Branding:
+   home page `/login`, privacy policy `/privacy`, authorized domain
+   `ourbasket-kohl.vercel.app`, no logo (a logo needs Google's verification). Publish the
+   app ("In production"). Google shows a client secret only once, when it's created; to
+   replace one, "Add secret", update `GOOGLE_CLIENT_SECRET` in Vercel, redeploy, check
+   sign-in, then disable and delete the old secret.
 3. **Pusher:** a separate Channels app for Production (cluster `eu`), so local tests
    never send events to the phones.
 4. **Vercel:** import the GitHub repository (framework Next.js, Node.js 24), and set the
    Production variables from [`.env.example`](.env.example): the Neon strings,
    `BETTER_AUTH_URL` (the app's URL), a new `BETTER_AUTH_SECRET`, the two
    `USER_EMAIL_*`, the production Google client, and the production Pusher app.
-5. After the first deploy: a Neon branch `preview` (from `main`, so it has the tables and
-   the default categories). The Preview variables are its connection strings and a
-   separate `BETTER_AUTH_SECRET` (Better Auth refuses to start without one, even on the
-   login page). Preview doesn't inherit the Production variables, and the Production
-   secret stays Production-only.
+5. After the first deploy: a Neon branch `preview` (from `production`, with its data, so
+   it has the tables and the default categories; auto-delete: never). In its SQL Editor,
+   `DELETE FROM "user"; DELETE FROM "verification";` removes the copied accounts and
+   sessions. The Preview variables are its connection strings and a separate
+   `BETTER_AUTH_SECRET` (Better Auth refuses to start without one, even on the login
+   page). Preview doesn't inherit the Production variables, and the Production secret
+   stays Production-only.
+6. Vercel > Settings > Build and Deployment > Deployment Checks: add the GitHub check
+   "Lint, types, tests and build".
 
 ## Project structure
 
