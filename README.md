@@ -287,7 +287,10 @@ One-time setup:
    `BETTER_AUTH_URL` (the app's URL), a new `BETTER_AUTH_SECRET`, the two
    `USER_EMAIL_*`, the production Google client, and the production Pusher app.
 5. After the first deploy: a Neon branch `preview` (from `main`, so it has the tables and
-   the default categories), and its connection strings as the Preview variables.
+   the default categories). The Preview variables are its connection strings and a
+   separate `BETTER_AUTH_SECRET` (Better Auth refuses to start without one, even on the
+   login page). Preview doesn't inherit the Production variables, and the Production
+   secret stays Production-only.
 
 ## Project structure
 

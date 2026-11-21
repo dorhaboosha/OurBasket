@@ -15,7 +15,9 @@ change: check the providers' pages before relying on a number.
 | Google OAuth   | Free          | 100 test users while "Testing"; no cost                    | 2 users                                |
 
 Nothing is close to a limit. The first one to watch would be Neon's compute hours, if the
-database stopped scaling to zero.
+database stopped scaling to zero: when they run out, Neon suspends the compute, open
+connections drop and new ones are refused until the next month (or an upgrade), so the
+app can't load or save anything until then.
 
 ## Vercel (Hobby)
 
@@ -35,6 +37,8 @@ database stopped scaling to zero.
 - The compute scales to zero after 5 minutes without queries (can't be turned off on Free)
   and wakes in a second or so: the first request after a quiet time is a little slower.
   Two people opening a list a few times a day keep it asleep most of the time.
+- Out of compute hours, the compute is suspended until the next month: connections drop
+  and new ones are refused. The Neon console shows the hours used so far.
 - Over 1 GB, writes that add data fail. The list, categories and history are tiny: years
   of weekly purchases are a few MB.
 - Source: [Free plan limits](https://neon.com/faqs/free-plan-limits-and-quotas),
