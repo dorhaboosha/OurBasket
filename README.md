@@ -249,6 +249,46 @@ end-to-end tests on every push and on every Pull Request into `main`.
 `step-1-project-setup`) and a Pull Request, and the CI check
 "Lint, types, tests and build" must pass before merging.
 
+## Deployment
+
+[Vercel](https://vercel.com) (Hobby) runs the app; [Neon](https://neon.tech) (Free) is
+the database, both in Frankfurt. The free tiers' limits, and how far we are from them,
+are in [`docs/free-tier-limits.md`](docs/free-tier-limits.md).
+
+- [`vercel.json`](vercel.json): functions in `fra1` (Frankfurt, next to Neon), and the
+  build command `npm run vercel-build`.
+- [`scripts/vercel-build.mjs`](scripts/vercel-build.mjs) builds the app and then, in
+  Production only, runs `prisma migrate deploy` and the seed (safe to run again). A
+  broken build never touches the database; a failed migration fails the deployment, and
+  the previous one keeps serving. Migrations must therefore work with the code already
+  running.
+- Every push to `main` deploys to Production. `main` only takes Pull Requests whose CI
+  passed, and Vercel's Deployment Checks can also hold the deployment until the CI check
+  "Lint, types, tests and build" passes on `main`.
+- Every Pull Request gets a Preview deployment, with its own database (a Neon branch), never
+  the Production one. Google sign-in doesn't work there (its URL changes), so only the
+  login and privacy pages can be checked; sign-in is checked locally and in Production.
+- [`/api/health`](src/app/api/health/route.ts) answers `{"status":"ok"}` when the app
+  reaches the database, and 503 otherwise.
+
+One-time setup:
+
+1. **Neon:** a project `ourbasket`, Postgres 16, region `aws-eu-central-1` (Frankfurt).
+   Its `main` branch is Production. Copy the pooled connection string (host contains
+   `-pooler`) for `DATABASE_URL` and the direct one for `DIRECT_URL`.
+2. **Google Cloud** (project "OurBasket"): a second OAuth client, "OurBasket
+   (production)", with the JavaScript origin `https://<app>.vercel.app` and the redirect
+   URI `https://<app>.vercel.app/api/auth/callback/google`. Branding: home page
+   `/login`, privacy policy `/privacy`. Publish the app ("In production").
+3. **Pusher:** a separate Channels app for Production (cluster `eu`), so local tests
+   never send events to the phones.
+4. **Vercel:** import the GitHub repository (framework Next.js, Node.js 24), and set the
+   Production variables from [`.env.example`](.env.example): the Neon strings,
+   `BETTER_AUTH_URL` (the app's URL), a new `BETTER_AUTH_SECRET`, the two
+   `USER_EMAIL_*`, the production Google client, and the production Pusher app.
+5. After the first deploy: a Neon branch `preview` (from `main`, so it has the tables and
+   the default categories), and its connection strings as the Preview variables.
+
 ## Project structure
 
 ```
