@@ -4,13 +4,13 @@ A shared shopping list for two people (Dor and Maayan), in Hebrew and right-to-l
 One list, edited from any device, synced in real time, with categories, checked items,
 purchase history and export to WhatsApp text or a printable page.
 
-> **Status:** Steps 1–9 are done: the project setup (Next.js, Chakra UI in RTL, Hebrew
+> **Status:** Steps 1–10 are done: the project setup (Next.js, Chakra UI in RTL, Hebrew
 > text, tests, CI), the database (Prisma, tables, rules, seed), sign-in with Google for
 > the two allowed accounts, the navigation with category management in the settings,
 > the shopping list itself, "update list", the purchase history, real-time sync between
-> the two phones, and exporting the list. Next: installing it as an app (PWA, step 10).
-> See
-> [`OurBasketSpec.md`](OurBasketSpec.md) for the full spec and the decision log (Hebrew).
+> the two phones, exporting the list, and installing it as an app (PWA, logo and icons).
+> Next: deploying to Vercel (step 11). See [`OurBasketSpec.md`](OurBasketSpec.md) for
+> the full spec and the decision log (Hebrew).
 
 ## Tech stack
 
@@ -143,6 +143,27 @@ Both include only the products not checked off yet, by category, in list order (
   of the printers. A product or a category heading is never cut between pages. No PDF is
   made on the server.
 
+## Installing on a phone
+
+OurBasket installs as an app (a PWA, spec 13): it gets its own icon on the home screen
+and opens in its own window, without the browser's bar.
+
+- **Android (Chrome):** open the site, then the menu (⋮) → "Install app" (or "Add to home
+  screen"). Chrome may also offer it in a banner.
+- **iPhone (Safari):** open the site, then Share (the square with an arrow) → "Add to Home
+  Screen" → "Add". The iPhone never offers it by itself.
+
+It still needs the internet: there is no offline mode, and without a connection a notice
+says so.
+
+**The logo:** [`public/logo.svg`](public/logo.svg) is the only source. The favicon is the
+SVG itself; every PNG (the 32×32 favicon, 192 and 512, the maskable 192 and 512 that
+Android crops to its own shape, and the iPhone's 180) is made from it by
+[`src/app/icons/[name]/route.tsx`](src/app/icons/[name]/route.tsx), at build time. To
+change the logo, replace the SVG: keep its background the brand color, and the drawing
+within the middle 80% circle. The manifest is
+[`src/app/manifest.ts`](src/app/manifest.ts).
+
 ## Real-time sync
 
 Both phones stay current (spec 12):
@@ -233,8 +254,9 @@ end-to-end tests on every push and on every Pull Request into `main`.
 ```
 src/
   app/                 routes: (app)/ = signed-in pages (list, history, settings,
-                       with the navigation), login/, privacy/, api/auth (Better
-                       Auth), icon.svg
+                       with the navigation), login/, privacy/, print/, api/auth
+                       (Better Auth), api/pusher, icons/ (made from the logo),
+                       manifest.ts
   components/          providers (Chakra, Emotion), toasts, shared dialog styles
   config/              app.config.ts and the contrast helper
   i18n/                next-intl setup (one fixed locale)
@@ -248,6 +270,7 @@ src/
                        history/ (update list, reading, adding back, deleting)
   proxy.ts             redirects to /login when there is no session cookie
   generated/           Prisma client (generated, not in git)
+public/logo.svg        the logo, source of every icon
 messages/he.json       all UI text
 prisma/                schema, migrations, seed script
 docker/                local database setup

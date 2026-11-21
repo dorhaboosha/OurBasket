@@ -9,9 +9,14 @@ export async function AppHeader({ displayName }: { displayName: string }) {
   return (
     <Box as="header" borderBottomWidth="1px" px={{ base: "4", md: "6" }} h="14">
       <HStack justify="space-between" h="full" gap="4">
-        <Text fontWeight="bold" fontSize="xl" color="brand">
-          🛒 {t("app.name")}
-        </Text>
+        <HStack gap="2">
+          {/* The logo, next to the name that says it (spec 13). */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- a small SVG, nothing to optimize */}
+          <img src="/logo.svg" alt="" width={28} height={28} />
+          <Text fontWeight="bold" fontSize="xl" color="brand">
+            {t("app.name")}
+          </Text>
+        </HStack>
         <Text>{t("header.signedInAs", { name: displayName })}</Text>
       </HStack>
     </Box>
