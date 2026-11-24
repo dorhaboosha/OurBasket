@@ -144,6 +144,13 @@ Both include only the products not checked off yet, by category, in list order (
   of the printers. A product or a category heading is never cut between pages. No PDF is
   made on the server.
 
+  In the app added to an iPhone's home screen, iOS ignores the print dialog (nothing
+  opens, nothing fails). There the button makes a PDF in the phone instead
+  ([`src/modules/export/pdf.ts`](src/modules/export/pdf.ts)): the same page drawn on a
+  canvas, page by page, with [pdf-lib](https://pdf-lib.js.org), and opens the share
+  sheet with it, which offers Print, Save to Files and WhatsApp. The PDF is made when the
+  page opens, since the share sheet only opens straight from a tap.
+
 ## Installing on a phone
 
 OurBasket installs as an app (a PWA, spec 13): it gets its own icon on the home screen

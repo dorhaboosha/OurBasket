@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { PDFDocument } from "pdf-lib";
 import { addProduct, db, expect, openMenu, seedDefaults, test } from "./fixtures";
 
 const RTL_MARK = String.fromCharCode(0x200f);
@@ -152,6 +153,107 @@ test.describe("printing", () => {
     await page.goto("/print");
     await page.getByRole("link", { name: "חזרה לרשימה" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "רשימת הקניות" })).toBeVisible();
+  });
+});
+
+test.describe("printing from an iPhone's home screen app", () => {
+  type Shared = {
+    printed: number;
+    shares: { title?: string; name: string; type: string; base64: string }[];
+  };
+
+  // What iOS does there: `navigator.standalone`, touch, file sharing, and a print() that
+  // does nothing. The share sheet is replaced by a record of what was shared.
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      const shared: Shared = { printed: 0, shares: [] };
+      (window as unknown as { shared: Shared }).shared = shared;
+      Object.defineProperty(navigator, "standalone", { value: true });
+      Object.defineProperty(navigator, "maxTouchPoints", { get: () => 5 });
+      window.print = () => {
+        shared.printed += 1;
+      };
+      navigator.canShare = (data) => Boolean(data?.files?.length);
+      navigator.share = async (data) => {
+        const file = data?.files?.[0];
+        if (!file) throw new TypeError("No file");
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        let binary = "";
+        for (const byte of bytes) binary += String.fromCharCode(byte);
+        shared.shares.push({
+          title: data.title,
+          name: file.name,
+          type: file.type,
+          base64: btoa(binary),
+        });
+      };
+    });
+  });
+
+  /** Taps the button once the PDF is made, as it is a moment after the page opens. */
+  async function sharePdf(page: Page) {
+    const button = page.getByRole("button", { name: "הדפסה / שמירה כ-PDF" });
+    await expect(button).toHaveAttribute("data-pdf", "ready", { timeout: 15_000 });
+    await button.click();
+  }
+
+  const shared = (page: Page) =>
+    page.evaluate(() => (window as unknown as { shared: Shared }).shared);
+
+  test("shares a PDF of the list instead of opening the print dialog @mobile", async ({
+    page,
+  }, testInfo) => {
+    await openList(page);
+    await (await openExport(page)).getByRole("menuitem", { name: "הדפסה / PDF" }).click();
+    await expect(page).toHaveURL(/\/print$/);
+
+    await sharePdf(page);
+    await expect.poll(async () => (await shared(page)).shares.length).toBe(1);
+
+    const { printed, shares } = await shared(page);
+    expect(printed).toBe(0);
+    expect(shares[0]).toMatchObject({
+      title: "OurBasket — רשימת קניות",
+      name: "OurBasket.pdf",
+      type: "application/pdf",
+    });
+    const pdf = Buffer.from(shares[0].base64, "base64");
+    await testInfo.attach("list.pdf", { body: pdf, contentType: "application/pdf" });
+    const document = await PDFDocument.load(pdf);
+    expect(document.getPageCount()).toBe(1);
+    expect(document.getTitle()).toBe("OurBasket — רשימת קניות");
+    const [width, height] = [document.getPage(0).getWidth(), document.getPage(0).getHeight()];
+    expect([Math.round(width), Math.round(height)]).toEqual([595, 842]);
+  });
+
+  test("continues a long list on more pages", async ({ page }) => {
+    for (let index = 1; index <= 70; index += 1) await addProduct("משקאות", `בקבוק ${index}`);
+    await page.goto("/print");
+    await sharePdf(page);
+    await expect.poll(async () => (await shared(page)).shares.length).toBe(1);
+    const document = await PDFDocument.load(
+      Buffer.from((await shared(page)).shares[0].base64, "base64"),
+    );
+    expect(document.getPageCount()).toBeGreaterThan(1);
+  });
+
+  test("says so when the share sheet can't open", async ({ page, pageErrors }) => {
+    await page.addInitScript(() => {
+      navigator.share = () => Promise.reject(new DOMException("Not allowed", "NotAllowedError"));
+    });
+    await page.goto("/print");
+    await sharePdf(page);
+    await expect(
+      page.getByRole("alert").filter({
+        hasText: "לא הצלחנו לפתוח את הקובץ להדפסה. אפשר לפתוח את OurBasket ב-Safari ולהדפיס משם.",
+      }),
+    ).toBeVisible();
+    // The failure is logged, as expected.
+    pageErrors.splice(
+      0,
+      pageErrors.length,
+      ...pageErrors.filter((error) => !error.startsWith("Sharing the PDF failed")),
+    );
   });
 });
 
