@@ -56,6 +56,8 @@ async function loadFont(fontFamily: string) {
     ]);
   } catch (error) {
     console.warn("The app's font didn't load for the PDF", error);
+    // The first failure ends the wait above: let the other loads finish too.
+    await document.fonts.ready;
   }
 }
 
