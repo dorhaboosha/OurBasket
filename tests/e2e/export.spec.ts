@@ -173,6 +173,8 @@ test.describe("printing from an iPhone's home screen app", () => {
       window.print = () => {
         shared.printed += 1;
       };
+      // A font that can't load, as next/font's fallback (a local Arial) on a device without it.
+      document.fonts.add(new FontFace("Heebo Fallback", "local('No Such Font')"));
       navigator.canShare = (data) => Boolean(data?.files?.length);
       navigator.share = async (data) => {
         const file = data?.files?.[0];

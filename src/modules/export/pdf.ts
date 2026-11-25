@@ -11,11 +11,7 @@ const SCALE = 200 / 72;
  */
 export async function makePdf(content: PdfContent, fontFamily: string): Promise<Blob> {
   const fontOf = (font: Font) => `${font.bold ? 700 : 400} ${font.size}px ${fontFamily}`;
-  // The text is drawn in the app's font only once it has loaded.
-  await Promise.all([
-    document.fonts.load(fontOf({ size: 12, bold: false }), "א"),
-    document.fonts.load(fontOf({ size: 12, bold: true }), "א"),
-  ]);
+  await loadFont(fontFamily);
 
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(PAGE.width * SCALE);
@@ -43,6 +39,24 @@ export async function makePdf(content: PdfContent, fontFamily: string): Promise<
   }
   const bytes = await pdf.save();
   return new Blob([bytes as BlobPart], { type: "application/pdf" });
+}
+
+/**
+ * Waits for the app's font, so the text is drawn in it: its Hebrew and its Latin letters
+ * are separate files. Only the first family in the list: next/font's fallback face points
+ * to a local Arial, which a device may not have, and a font that can't load mustn't stop
+ * the PDF (it's then drawn in another font).
+ */
+async function loadFont(fontFamily: string) {
+  const family = fontFamily.split(",")[0].trim();
+  try {
+    await Promise.all([
+      document.fonts.load(`400 12px ${family}`, "אA"),
+      document.fonts.load(`700 12px ${family}`, "אA"),
+    ]);
+  } catch (error) {
+    console.warn("The app's font didn't load for the PDF", error);
+  }
 }
 
 function draw(context: CanvasRenderingContext2D, ops: DrawOp[], fontOf: (font: Font) => string) {
