@@ -5,6 +5,7 @@ import {
   containerOf,
   containersOf,
   moveBetween,
+  newerList,
   visibleCategories,
   withContainers,
 } from "./view";
@@ -98,5 +99,21 @@ describe("withContainers", () => {
     ]);
     expect(moved.categories[2].products).toEqual([]);
     expect(moved.revision).toBe(5);
+  });
+});
+
+describe("newerList", () => {
+  const at = (revision: number): ListSnapshot => ({ ...list, revision });
+
+  it("shows a list from the server that is as new or newer", () => {
+    expect(newerList(at(5), at(6)).revision).toBe(6);
+    // The same revision again: the server's copy, which has nothing optimistic in it.
+    const same = at(5);
+    expect(newerList(at(5), same)).toBe(same);
+  });
+
+  it("keeps the list shown when an older one arrives late", () => {
+    const shown = at(7);
+    expect(newerList(shown, at(6))).toBe(shown);
   });
 });

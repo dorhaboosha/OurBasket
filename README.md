@@ -9,8 +9,9 @@ purchase history and export to WhatsApp text or a printable page.
 > the two allowed accounts, the navigation with category management in the settings,
 > the shopping list itself, "update list", the purchase history, real-time sync between
 > the two phones, exporting the list, and installing it as an app (PWA, logo and icons).
-> Step 11: the app is deployed on Vercel, at https://ourbasket-kohl.vercel.app; checking
-> it on the phones is next, then the acceptance (step 12). See
+> Step 11: the app is deployed on Vercel, at https://ourbasket-kohl.vercel.app. Step 12,
+> acceptance: each criterion and the tests that check it are in
+> [`docs/acceptance.md`](docs/acceptance.md). See
 > [`OurBasketSpec.md`](OurBasketSpec.md) for the full spec and the decision log (Hebrew).
 
 ## Tech stack
@@ -241,6 +242,12 @@ data. They apply the migrations first and empty the tables before each test.
 - Every test fails on any browser console error.
 - Each screen is scanned with axe-core (WCAG 2.1 A and AA), and on the phone every
   tappable element must be at least 44×44 pixels.
+- Every server action is called without permission and must send the caller to /login
+  without changing anything ([`tests/integration/actions-auth.test.ts`](tests/integration/actions-auth.test.ts)):
+  a new action fails it until it's added there.
+
+[`docs/acceptance.md`](docs/acceptance.md) lists each acceptance criterion (spec §20)
+with the tests that check it, and what is checked by hand on production.
 
 Other checks: `npm run lint`, `npm run typecheck`, `npm run format:check`
 (`npm run format` fixes formatting).

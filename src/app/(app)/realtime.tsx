@@ -18,7 +18,7 @@ import {
   LIST_CHANGED_EVENT,
   REALTIME_AUTH_ENDPOINT,
   REALTIME_CHANNEL,
-  revisionOf,
+  newRevision,
 } from "@/modules/realtime/channel";
 
 /** Reloads closer together than this are merged into one (spec 12.3: no double loads). */
@@ -107,9 +107,9 @@ export function Realtime({ revision, pusherKey, pusherCluster, offlineMessage, c
     });
     const channel = pusher.subscribe(REALTIME_CHANNEL);
     channel.bind(LIST_CHANGED_EVENT, (payload: unknown) => {
-      const eventRevision = revisionOf(payload);
+      const eventRevision = newRevision(payload, known.current);
       // Ours, or already seen: the screen has it (spec 12.2).
-      if (eventRevision === null || eventRevision <= known.current) return;
+      if (eventRevision === null) return;
       known.current = eventRevision;
       reload();
     });

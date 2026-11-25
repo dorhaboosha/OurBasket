@@ -16,3 +16,12 @@ export function revisionOf(payload: unknown): number | null {
   const revision = (payload as { revision?: unknown } | null)?.revision;
   return Number.isSafeInteger(revision) && (revision as number) >= 0 ? (revision as number) : null;
 }
+
+/**
+ * The revision of an event that tells of a change not yet seen, or null for one to ignore:
+ * invalid, a duplicate, our own change, or older than the screen (spec 12.2).
+ */
+export function newRevision(payload: unknown, known: number): number | null {
+  const revision = revisionOf(payload);
+  return revision !== null && revision > known ? revision : null;
+}
