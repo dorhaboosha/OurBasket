@@ -43,7 +43,25 @@ async function PrintList({ searchParams }: Pick<PageProps<"/print">, "searchPara
     <Stack gap="6" color="black">
       <PrintToolbar
         autoPrint={print === "1"}
-        labels={{ print: t("printButton"), back: t("back") }}
+        pdf={{
+          title: t("title"),
+          created: t("created", { date: created }),
+          empty: t("empty"),
+          categories: categories.map((category) => ({
+            icon: category.icon,
+            name: category.name,
+            products: category.products.map((product) => ({
+              name: product.name,
+              quantity: t("quantity", { count: product.quantity }),
+            })),
+          })),
+        }}
+        labels={{
+          print: t("printButton"),
+          back: t("back"),
+          preparing: t("preparing"),
+          shareFailed: t("shareFailed"),
+        }}
       />
       <Box as="header" borderBottomWidth="2px" borderColor="black" pb="3">
         <Heading as="h1" size="2xl">
