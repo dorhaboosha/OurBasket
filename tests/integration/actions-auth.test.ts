@@ -153,7 +153,10 @@ function serverActionFiles() {
   return readdirSync(src, { recursive: true, encoding: "utf8" })
     .filter((file) => /\.tsx?$/.test(file) && !file.startsWith(`generated${path.sep}`))
     .filter((file) =>
-      /^\s*["']use server["'];?\s*$/m.test(readFileSync(path.join(src, file), "utf8")),
+      // The directive on its own line, maybe followed by a comment.
+      /^\s*["']use server["'];?\s*(\/\/.*|\/\*.*\*\/\s*)?$/m.test(
+        readFileSync(path.join(src, file), "utf8"),
+      ),
     )
     .map((file) => file.split(path.sep).join("/"))
     .sort();
