@@ -52,6 +52,7 @@ import {
   containerOf,
   containersOf,
   moveBetween,
+  newerList,
   visibleCategories,
   withContainers,
 } from "@/modules/list/view";
@@ -103,7 +104,7 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
   const [seen, setSeen] = useState(initial);
   if (initial !== seen) {
     setSeen(initial);
-    if (initial.revision >= list.revision) setList(initial);
+    setList(newerList(list, initial));
   }
   const [shown, showOptimistic] = useOptimistic(list, applyOptimistic);
   const [, startTransition] = useTransition();
@@ -125,7 +126,7 @@ export function ShoppingList({ initial, palette, quantityMax }: Props) {
 
   /** Shows a list from the server, unless the one shown is newer. */
   function apply(next: ListSnapshot) {
-    setList((current) => (next.revision >= current.revision ? next : current));
+    setList((current) => newerList(current, next));
     // The real-time event for this revision (our own change) needs no reload.
     reportRevision(next.revision);
   }

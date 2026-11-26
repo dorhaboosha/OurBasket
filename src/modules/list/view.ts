@@ -15,6 +15,14 @@ export type OptimisticChange =
   /** A drag and drop: the products of the categories it changed, in their new order. */
   | { kind: "order"; containers: Containers };
 
+/**
+ * The list to show when the server sends one: the newer of the two. An answer or a
+ * reload that arrives late never replaces a newer list (spec 12.2).
+ */
+export function newerList(shown: ListSnapshot, received: ListSnapshot): ListSnapshot {
+  return received.revision >= shown.revision ? received : shown;
+}
+
 export function applyOptimistic(list: ListSnapshot, change: OptimisticChange): ListSnapshot {
   if (change.kind === "order") return withContainers(list, change.containers);
   return {

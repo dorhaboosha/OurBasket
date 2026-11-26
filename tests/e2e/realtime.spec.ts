@@ -1,5 +1,5 @@
 import type { Page, Request } from "@playwright/test";
-import { addProduct, addPurchase, expect, seedDefaults, test } from "./fixtures";
+import { addProduct, addPurchase, db, expect, seedDefaults, test } from "./fixtures";
 
 // Real-time events need the real Pusher, which tests never use (see E2E_ENV). These tests
 // cover what doesn't: reloading on return to the app, the offline notice, and the
@@ -121,6 +121,38 @@ test.describe("offline", () => {
     await page.context().setOffline(false);
     await expect(banner).toHaveCount(0);
     await expect(page.getByRole("checkbox", { name: "סוללות" })).toBeVisible();
+  });
+
+  test("saves nothing offline, and doesn't send it later @mobile", async ({
+    page,
+    signInAs,
+    pageErrors,
+  }) => {
+    await addProduct("כללי", "סוללות");
+    await signInAs("dor");
+    await openList(page);
+    await page.context().setOffline(true);
+
+    await page.getByRole("checkbox", { name: "סוללות" }).click();
+    await expect(page.getByText("משהו השתבש. בדקו את החיבור לאינטרנט ונסו שוב.")).toBeVisible();
+    // Not checked on the screen once the attempt failed, nor in the database.
+    await expect(page.getByRole("checkbox", { name: "סוללות" })).not.toBeChecked();
+    const checked = async () =>
+      (await db.query(`SELECT "isChecked" FROM product WHERE name = 'סוללות'`)).rows[0]?.isChecked;
+    expect(await checked()).toBe(false);
+
+    // Back online: nothing was kept to send later.
+    await page.context().setOffline(false);
+    await expect(page.getByTestId("offline-banner")).toHaveCount(0);
+    await page.waitForLoadState("networkidle");
+    expect(await checked()).toBe(false);
+    await expect(page.getByRole("checkbox", { name: "סוללות" })).not.toBeChecked();
+    // The browser reports the request that couldn't go out, as expected.
+    pageErrors.splice(
+      0,
+      pageErrors.length,
+      ...pageErrors.filter((error) => !/ERR_INTERNET_DISCONNECTED|Failed to fetch/.test(error)),
+    );
   });
 });
 
