@@ -96,7 +96,7 @@ On production, with the real Google sign-in, Pusher and phones: what CI can't ru
 | A change on one phone shows on the other in real time                                        | ✅ 2026-11-24, 2–4 seconds |
 | Added to the iPhone's home screen: its name and icon, opens without the browser's bar        | ✅ 2026-11-24 |
 | Printing: from a computer, from Safari on the iPhone, and as a PDF from the home screen app | ✅ 2026-11-25 |
-| Copy for WhatsApp, pasted in WhatsApp                                                       | PENDING |
-| A Google account that isn't allowed is refused, with the message, in a private window       | PENDING |
-| Offline (airplane mode): the notice shows, nothing can be saved; back online, it catches up | PENDING |
-| Added to an Android phone's home screen                                                     | PENDING |
+| Copy for WhatsApp, pasted in WhatsApp | ✅ 2026-11-26 |
+| A Google account that isn't allowed is refused, with the message, in a private window | ✅ 2026-11-26 |
+| Offline (airplane mode): the notice shows, nothing can be saved; back online, it catches up | ✅ 2026-11-26 |
+| Added to an Android phone's home screen | Not checked: both phones are iPhones. The manifest and icons Android uses are checked by `e2e/pwa`. |

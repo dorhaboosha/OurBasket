@@ -4,14 +4,16 @@ A shared shopping list for two people (Dor and Maayan), in Hebrew and right-to-l
 One list, edited from any device, synced in real time, with categories, checked items,
 purchase history and export to WhatsApp text or a printable page.
 
-> **Status:** Steps 1–10 are done: the project setup (Next.js, Chakra UI in RTL, Hebrew
-> text, tests, CI), the database (Prisma, tables, rules, seed), sign-in with Google for
-> the two allowed accounts, the navigation with category management in the settings,
-> the shopping list itself, "update list", the purchase history, real-time sync between
-> the two phones, exporting the list, and installing it as an app (PWA, logo and icons).
-> Step 11: the app is deployed on Vercel, at https://ourbasket-kohl.vercel.app. Step 12,
-> acceptance: each criterion and the tests that check it are in
-> [`docs/acceptance.md`](docs/acceptance.md). See
+> **Status:** The first version is done: all 12 steps of the spec. Its acceptance
+> criteria are met, except that installing on Android hasn't been checked on a phone
+> (both phones are iPhones; see [`docs/acceptance.md`](docs/acceptance.md)).
+> Steps 1–10: the project setup (Next.js, Chakra UI in RTL, Hebrew text, tests, CI), the
+> database (Prisma, tables, rules, seed), sign-in with Google for the two allowed
+> accounts, the navigation with category management in the settings, the shopping list
+> itself, "update list", the purchase history, real-time sync between the two phones,
+> exporting the list, and installing it as an app (PWA, logo and icons). Step 11: the
+> app is deployed on Vercel, at https://ourbasket-kohl.vercel.app. Step 12: acceptance,
+> with the tests for each criterion and the checks made by hand. See
 > [`OurBasketSpec.md`](OurBasketSpec.md) for the full spec and the decision log (Hebrew).
 
 ## Tech stack
