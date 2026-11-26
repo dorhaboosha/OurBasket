@@ -83,7 +83,7 @@ Test files: `e2e/…` is in [`tests/e2e`](../tests/e2e), `int/…` in
 | On a phone, every button and tap area is at least 44×44 | `e2e/accessibility` "has 44×44 touch targets", on every screen and dialog |
 | The automatic accessibility check passes on every screen and dialog | `e2e/accessibility` (axe) |
 | Installs as a PWA on Android and iPhone, with its name and icon, without the browser's bar | `e2e/pwa` (manifest, icons, links) |
-| Offline: a notice is shown and no action is saved offline | `e2e/realtime` "says the app needs a connection, and catches up when it's back" |
+| Offline: a notice is shown and no action is saved offline | `e2e/realtime` "says the app needs a connection, and catches up when it's back", "saves nothing offline, and doesn't send it later" |
 
 ## Checked by hand
 

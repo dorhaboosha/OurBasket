@@ -243,8 +243,9 @@ data. They apply the migrations first and empty the tables before each test.
 - Each screen is scanned with axe-core (WCAG 2.1 A and AA), and on the phone every
   tappable element must be at least 44×44 pixels.
 - Every server action is called without permission and must send the caller to /login
-  without changing anything ([`tests/integration/actions-auth.test.ts`](tests/integration/actions-auth.test.ts)):
-  a new action fails it until it's added there.
+  without changing anything ([`tests/integration/actions-auth.test.ts`](tests/integration/actions-auth.test.ts)).
+  The test finds every file in `src` with `"use server"` and every action they export,
+  so a new action, or a new file of actions, fails it until it's added there.
 
 [`docs/acceptance.md`](docs/acceptance.md) lists each acceptance criterion (spec §20)
 with the tests that check it, and what is checked by hand on production.

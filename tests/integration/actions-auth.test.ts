@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as historyActions from "@/app/(app)/history/actions";
 import * as listActions from "@/app/(app)/list-actions";
@@ -145,7 +147,27 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
+/** Every file in src that declares server actions: a whole file, or inside a function. */
+function serverActionFiles() {
+  const src = path.resolve("src");
+  return readdirSync(src, { recursive: true, encoding: "utf8" })
+    .filter((file) => /\.tsx?$/.test(file) && !file.startsWith(`generated${path.sep}`))
+    .filter((file) =>
+      /^\s*["']use server["'];?\s*$/m.test(readFileSync(path.join(src, file), "utf8")),
+    )
+    .map((file) => file.split(path.sep).join("/"))
+    .sort();
+}
+
 describe("every server action", () => {
+  it("lives in one of the files imported here, so none is missed", () => {
+    expect(serverActionFiles()).toEqual([
+      "app/(app)/history/actions.ts",
+      "app/(app)/list-actions.ts",
+      "app/(app)/settings/actions.ts",
+    ]);
+  });
+
   it("is in this test, so a new one can't skip it", () => {
     const exported = [listActions, historyActions, settingsActions].flatMap((module) =>
       Object.entries(module)
