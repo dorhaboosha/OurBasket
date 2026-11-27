@@ -255,6 +255,11 @@ with the tests that check it, and what is checked by hand on production.
 Other checks: `npm run lint`, `npm run typecheck`, `npm run format:check`
 (`npm run format` fixes formatting).
 
+`npm audit` is clean. Two `overrides` in [`package.json`](package.json) replace
+vulnerable packages inside development tools until those tools update them: `minimatch`
+in `typescript-eslint`, and `effect` in Prisma's CLI. Remove each one once the tool's own
+version has the fix (see the spec's open items).
+
 ## CI
 
 [GitHub Actions](.github/workflows/ci.yml) runs formatting, lint, types, the unit and
